@@ -1,0 +1,299 @@
+---
+title: "Procesos de Poisson"
+author: "Aura Gonzalez"
+date: "3/23/2022"
+output: pdf_document
+---
+
+### Procesos estocásticos y cadenas de Markov
+
+En la actualidad existen dos tipos de procesos: deterministicos y estocásticos. En los primeros, si conocemos el punto de partida o las condiciones iniciales de una serie de eventos, podemos predecir el siguiente paso en la serie. Mientras que en los procesos estocásticos, aún conociendo las condiciones iniciales, no podemos determinar con certeza absoluta cuales serían los próximos pasos.
+
+Entonces, en los procesos deterministas, todos los pasos posteriores se conocen con una probabilidad de 1. En cambio, lo contrario se dice de los procesos estocásticos.
+
+Si el proceso es completamente aleatorio y no conocemos ningún patrón de este, no será de utilidad la información. 
+
+
+
+La modelación de procesos estocásticos es una tarea habitual en estadística y *Machine learning*, siendo algunos de estos procesos los más utilizados:
+
+**Procesos de Poisson**: para manejar tiempos de esperas y colas.
+**Caminatas aleatorias**: para modelas el precio o rentabilidad de acciones del mercado de valores.
+**Procesos de decisión de Markov**: comúnmente utilizado en biología computacional y aprendizaje por refuerzo.
+**Procesos gaussianos**: utilizado en problemas de regresión y optimización.
+**Procesos autorregresivos y de media móvil**: análisis de series de tiempo.
+
+
+#### Procesos de Poisson
+
+Estos procesos se utilizan para modelar una serie de eventos discretos en los que conocemos el tiempo promedio entre la ocurrencia de diferentes eventos, pero desconecemos con exactitud cuándo podría tener lugar cada uno.
+
+Se puede considerar un proceso como Poisson si puede cumplir con los siguientes criterios:
+
+* Los eventos son independientes entre sí (si ocurre un evento, esto no altera la probabilidad de que pueda ocurrir otro evento).
+* Dos eventos no pueden tener lugar simultáneamente. 
+* La tasa promedio entre la ocurrencia de eventos es constante.
+
+
+
+##### Aplicaciones de los procesos de Poisson 
+
+**Frecuencia con que se daña un tejido**
+
+Para este ejercicio utilizaremos el dataset `warpbreaks` disponible en la librería `datasets`. La base tiene 54 observaciones sobre rpturas del hilo cuando se realizan los tejidos, el tipo de hilo y la tensión aplicada.
+
+```{r Carga de datos, echo = FALSE, warning=FALSE}
+library(datasets)
+library(tidyverse)
+library(magrittr)
+library(ggpubr)
+library(arm) # para hacer comparaciones modelos
+library(queueing) # Para simular un sistema de cola
+
+data <- warpbreaks # Almacenar warpbreaks en otro objeto llamado data
+colnames(data) # Nombre de las columnas
+```
+Especificamente nuestro *dataset* está compuesto de tres (3) variables:
+1. **Breaks** (num). Número de quiebres.
+2. **Wool** (factor). Tipo de hilo (A o B).
+3. **Tension** (factor). Nivel de tensión (L, M o H).
+
+Interesa estimar la cantidad de quiebres que pueden esperarse, por lo que la variables dependientes será **breaks**, mientras que nuestras factores explicativos son **wool** y **tension**.
+
+Primero analicemos el comportamiento de nuestros datos:
+
+```{r AG quiebres tejido}
+# Distribución de los quiebres de hilo en un tejido
+quiebres <- data %>% 
+  ggplot() +
+  geom_histogram(aes(breaks), binwidth = 15, fill = "blue", col = "black") +
+  theme_classic() +
+  labs(title = "Distribución de los quiebres de hilo en un tejido",
+       y = "Frecuencia Absoluta",
+       x = "Quiebres")
+
+# Distribución de los quiebres de hilo en un tejido según tipo de hilo
+quiebres_hilo <- data %>% 
+  ggplot() +
+  geom_histogram(aes(x = breaks, fill = wool), binwidth = 15, col = "black", alpha=0.6, position = 'identity') +
+  theme_classic() +
+  labs(title = "Distribución de los quiebres de hilo en un tejido según tipo de hilo",
+       y = "Frecuencia Absoluta",
+       x = "Quiebres")
+
+# Distribucion de los quiebres de hilo en un tejido segun tension
+quiebres_tension <- data %>% 
+  ggplot() +
+  geom_histogram(aes(x = breaks, fill = tension), binwidth = 15, col = "black", alpha=0.6, position = 'identity') +
+  theme_classic() +
+  labs(title = "Distribución de los quiebres de hilo en un tejido según tensión",
+       y = "Frecuencia Absoluta",
+       x = "Quiebres")
+
+ggarrange(quiebres,quiebres_hilo, quiebres_tension) # Agrupar los 3 gráficos
+```
+
+En la gráfica anterior se observa que los datos tienen una distribución con asimetría positiva y no se asemejan a una campana de Gauss. En cuanto a los dos gráficos restantes se puede concluir que: los hilos del tipo A suelen quebrarse con mayor frecuencia, mientras que cuando se aplica una tensión alta ocurren menos quiebres.
+
+Cheequemos las estadísticas del proceso:
+
+```{r QH Estadisticas descriptivas}
+data %>% 
+  summarise(breaks_mean = mean(breaks), # Media de quiebres
+            breaks_var = var(breaks), # Varianza de quiebres
+            breaks_min = min(breaks), # Valor minimo de quiebres
+            breaks_max = max(breaks))  # Valor maximo de quiebres
+```
+
+La varianza es mucho mayor que la media, lo que sugiere que tendremos una dispersión excesiva en el modelo.
+
+Utilizando la función `glm()` entrenaremos nuestro modelo. 
+
+```{r}
+modelo.poisson <- glm(breaks ~ wool + tension, data, family = poisson(link = "log")) # Especificacion de un modelo de la familia de poison
+summary(modelo.poisson) # Detalle del modelo
+chisq <- modelo.poisson$null.deviance - modelo.poisson$deviance #desviacion nula - desviacion residual
+pchisq(chisq, df=50, lower.tail=FALSE) # "Bondad de ajuste del modelo"
+
+exp(3.69196)
+
+table(data$wool)
+```
+
+
+como los grados de libertad son 4 veces la desviaicon nula podemos decir que los datos estan muy dispersos, hay que correguir con un modelo de cuasi poisson
+
+La desviaicon nula nos dice que tan bien se ajusta nuestro modelo
+si la nula es menor que la residual quiere decir que 
+
+si la nula es mas alta que la residual eso queire decir que las variables de nuestro modelo estan explicando de una manera adecuada lo que se desea explicar y que este proximo a los grados de libertad
+
+
+
+**Interpretación del modelo de Poisson**
+
+Con exp (3.69196) podemos ver que el 40% de los hilos se quiebran
+
+La tabla muestra en la primera columna los coeficientes estimados: $\alpha$ (intersección), $\beta_1$ (pendiente de wool), $\beta_1$ (pendiente de wool), etc. 
+
+Los parámetros estimados resprentan:
+
+$exp(\alpha)$= efecto sobre la media $\mu$, cuando X = 0.
+$exp(\beta)$ = con cada incremento unitario en X, la variable predictora tiene un efecto multiplicador de $exp(\beta)$ sobre la media de Y.
+
+Entonces, 
+Si $\beta$ = 0, entonces $exp(\beta)$ = 1, y el conteo esperado es $exp(\alpha)$, y Y y X no guardan relación relacionados.
+Si $\beta$ > 0, entonces $exp(\beta)$ > 1, y el conteo esperado es $exp(\beta)$ veces mayor que cuando X = 0
+Si $\beta$ < 0, entonces $exp(\beta)$ < 1, y el conteo esperado es $exp(\beta)$ veces menor que cuando X = 0
+
+Si family = poisson se mantiene en glm() entonces, estos parámetros se calculan utilizando MLE de estimación de máxima verosimilitud.
+
+Para ver qué variables explicativas tienen un efecto sobre la variable de respuesta, veremos los valores de p. Si la p es inferior a 0.05, la variable tiene un efecto sobre la variable de respuesta. 
+
+*** es significativa al 0.001%
+** 0.01
+* 0.05
+(.) 0.10
+
+En el resumen anterior, podemos ver que todos los valores de p son inferiores a 0.05, por lo tanto, ambas variables explicativas (wool y tension) tienen un efecto significativo sobre los quiebre.
+
+**Antes de comenzar a interpretar los resultados, verifiquemos si el modelo tiene dispersión excesiva o dispersión insuficiente.** Si la desviación residual (*residual deviance*) es mayor que los grados de libertad, entonces existe una dispersión excesiva. Esto significa que las estimaciones son correctas, pero los errores estándar (desviación estándar) son incorrectos y el modelo no los tiene en cuenta.
+
+La desviación nula ($null deviance$) muestra qué tan bien se predice la variable de respuesta mediante un modelo que incluye solo el intercepto (gran media) mientras que es residual con la inclusión de variables independientes. Arriba, podemos ver que la suma de 3 (53-50 =3) variables independientes disminuyó la desviación a 210.39 desde 297.7.
+
+Entonces, para tener un error estándar más correcto, podemos usar un modelo cuasi-poisson:
+
+```{r Modelo cuasi-poisson}
+cuasi.poisson.model <- glm(breaks ~ wool + tension, data = data, family = quasipoisson(link = "log")) # Especificando quasipoisson como familia
+summary(cuasi.poisson.model)
+```
+
+Comparemos los resultados de ambos modelos...
+
+El tipo de hilo es significativa al 10% que es cuando se pone el (.)
+
+Los errores estandar cambiaron y por eso el estadistico cambio.
+
+```{r Prueba a ambos modelos}
+# Coeficientes de ambos modelos 
+coef.poisson <- coef(modelo.poisson)
+coef.cuasi.poisson <- coef(cuasi.poisson.model)
+
+# SE de ambos modelos 
+se.poisson <- se.coef(modelo.poisson)
+se.cuasi.poisson <- se.coef(cuasi.poisson.model)
+
+# Combinar ambos resultados
+modelos <- cbind(coef.poisson, se.poisson, coef.cuasi.poisson, se.cuasi.poisson, exponent = exp(coef.poisson))
+modelos
+```
+
+
+Se(errores estandar)
+
+En el resultado anterior podemos ver que los coeficientes son iguales en ambos modelos, pero los errores estándar son diferentes. En el primer caso los SE son más pequeños que en el último, sin embargo, no captan la verdadera dispersión de los datos.
+
+Considerando lo anterior, analicemos la estimación para wool. El coeficientes es -0.206 y exp(-0.206) es igual 0.814.
+
+```{r exp(wool)}
+exp(modelos[2,1]) # exp del coef de wool
+1 - exp(modelos[2,1]) # reduccion del numero de roturas o quiebres
+```
+
+
+Esto muestra que cambiar de wool tipo A a tipo B da como resultado una disminución en las roturas de 0.814 veces el intercepto (la estimación -0.2059884 es negativa). 
+
+Otra forma de decir esto es que si cambiamos el tipo de A a B, el número de roturas se reducirá en un 18.6%, suponiendo que todas las demás variables sean iguales.
+
+**Predecir valores**
+
+```{r Nuevos datos, echo=FALSE, warning=FALSE}
+# Un dataframe con nuevos datos
+nuevos.datos = data.frame(wool = "B", tension = "M") # Solo una obs.
+predict(cuasi.poisson.model, newdata = nuevos.datos, type = "response") # Predice un valor
+```
+
+El modelo predice que habrá aproximadamente 24 roturas con lana tipo B y nivel de tensión M.
+
+
+
+##### Simulación de colas en un banco
+
+**Sistema de colas**
+Estos sistemas se caracterizan por tres componentes:
+
+**Proceso de llegada**. Describe cómo llegan los clientes al sistema y la distribución de la llegada de los clientes.
+**Mecanismo de servicio**. Se articula por el número de servidores, y si cada servidor tiene su propia cola o hay una cola que alimenta a todos los servidores, y la distribución de los tiempos de servicio del cliente. 
+**Disciplina de cola**. Se refiere a la regla que utiliza un servidor para elegir el siguiente cliente de la cola cuando el servidor completa el servicio (por ejemplo, FIFO: primero en entrar, primero en salir; LIFO: último en entrar, primero en salir ; basado en prioridades; selección aleatoria)
+
+Para el ejemplo en clase, consideremos el sistema de colas más simple: M/M/1, con una tasa de llegada de Poisson de 4 clientes por minuto, un tiempo de servicio exponencial de 5 clientes por minuto y un solo servidor.
+
+```{r Modelo queue}
+library(queueing)
+insumos.mm1 <- NewInput.MM1(lambda = 4, mu = 5, n = 0) # Parametros del modelo
+output.mm1 <- QueueingModel(insumos.mm1)
+Report(output.mm1)
+```
+
+Explciación de las salidas del modelo:
+
+RO ($\rho$): utilización general del sistema.
+P0: la probabilidad de que todos los servidores estén inactivos.
+Lq: número promedio de clientes en la cola a largo plazo.
+Wq: tiempo medio de permanencia en la cola a largo plazo.
+X: rendimiento del sistema.
+L: número promedio de clientes en el sistema a largo plazo.
+W: tiempo medio de permanencia en el sistema a largo plazo.
+Wqq: tiempo medio a largo plazo pasado en la cola cuando hay cola en un modelo de colas.
+Lqq: número promedio a largo plazo de clientes en cola cuando hay cola en un modelo de cola.
+
+**Distirbución de Poisson para el proceso de llegada**
+```{r}
+# FMP de Poisson con lambda = 4
+curve(dpois(x, insumos.mm1$lambda),
+      from = 0, 
+      to = 20, 
+      type = "b", 
+      lwd = 2, #tamano de la linea
+      xlab = "Numero de clientes",
+      ylab = "Prob",
+      main = "Distirbución de Poisson para el proceso de llegadas",
+      ylim = c(0, 0.25),
+      n = 21)
+```
+
+**Distirbución exponencial para el intervalo de espera**
+```{r}
+# FMP exponencia con rate = 1/lambda 
+curve(dexp(x, rate =1/insumos.mm1$lambda),
+      from = 0, 
+      to = 10, 
+      type = "l", 
+      lwd = 2,
+      xlab = "Tiempo de espera",
+      ylab = "Prob",
+      main = "Distirbución exponencial para el intervalo de espera",
+      ylim = c(0, 0.5))
+abline(h =0) # agregar linea horizontal en 0
+```
+
+**Distirbución exponencial del tiempo en el proceso de servicio**
+```{r}
+# FMP exponencial con rate = mu. 
+curve(dexp(x, rate = insumos.mm1$mu),
+      from = 0, 
+      to = 5, 
+      type = "l", 
+      lwd = 2,
+      xlab = "Tiempo de espera en el servicio",
+      ylab = "Prob",
+      main = "Distirbución exponencial del tiempo en el proceso de servicio",
+      ylim = c(0, 1))
+abline(h =0)
+```
+
+Porque es una distribucio exponencial
+por la caracteristicas de la distribucion
+
+La probabilidad no es mayor que uno, 
+

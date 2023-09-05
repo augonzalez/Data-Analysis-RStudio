@@ -1,0 +1,267 @@
+---
+title: "Procesos gaussianos"
+author: "Aura Gonzalez"
+date: "3/30/2022"
+output: pdf_document
+---
+
+
+El término proceso gaussiano (GP) es genérico y se refiere a cualquier colección finita de realizaciones (u observaciones) que tiene una distribución normal multivariante (MVN). Lo anterior se traduce en que todas las realizaciones se describen de forma completa con:
+* Un vector de medios $/mu$.
+* Una matriz de covarianzas $\sum$.
+
+
+
+```{r Librerías, echo=FALSO, advertencia=FALSO}
+library(plgp) # Para Monte Carlo secuencial y filtro de partículas.
+library(tidyverse)
+library (magrittr)
+library (ggpubr)
+library(mvtnorm) # Para trabajar con distribuciones multivariadas normales
+library (GauPro)
+library(kernlab) # Métodos kernel en R
+library (GGally)
+library(visreg) # Para visualizar el resultado de los modelos de regresión
+library(readxl)
+library(rsample) # Funciones para crear variaciones de un conjunto de datos
+library(reticulate) # Interfaz para Python
+library(tfdatasets) # Librerias desde python
+library(keras) # Librerias desde python
+library(tfprobability) # Librerias desde python
+```
+
+
+
+##### Aplicacion al mercado de concreto
+
+Se sabe que la fortaleza del cemento tiene una relación no lineal con el tiempo y los ingredientes. Para esto contamos con 1030 observaciones de muestras de cemento de distintos días de elaboración e ingredientes.
+
+```{r}
+concreto <- read_xls(
+  "data_concrete.xls",
+  col_names =  c(
+    "cement", # kg en una mezcla de m3
+    "blast_furnace_slag", # kg de escorias alto horno en una mezcla de m3
+    "fly_ash", # kg de ceniza voladora en una mezcla de m3
+    "water", # kg en una mezcla de m3
+    "superplasticizer", # kg de superplastificante en una mezcla de m3
+    "coarse_aggregate", # kg agregado grueso en una mezcla de m3
+    "fine_aggregate", # kg agregado fino en una mezcla de m3
+    "age", # dias
+    "strength" # (MPa megapascales)
+  ),
+  skip = 1) # Saltar la primera columna
+concreto %>%
+  glimpse() # Observar la estructura de los datos
+```
+
+Se recoje información sobre el peso del cemento en kg en una mezcla de m3, ingredientes como escorias alto horno, ceniza voladora, superplastificante, agregado grueso y fino, la edad y la fortaleza.
+
+```{r Descripción de los datos}
+ggpairs(concreto) # Analisis grafico y desc de los datos
+```
+
+Al verificar una posible interacción, ¿la concentración de cemento actúa de manera diferente en la resistencia del concreto dependiendo de la cantidad de agua que haya en la mezcla?
+
+```{r Resistencia cemento y agua}
+cemento <- cut(concreto$cement, 3, labels =  c("bajo", "medio", "alto")) # Categorizar los datos de cementos
+lm_mod <- lm(strength ~ (.) ^ 2, data = cbind(concreto[, 2:9], cemento)) # Modelo lineal múltiple para explicar la resistencia del cemento con dos interacciones
+summary(lm_mod) # Resultado MLM
+#Visualización
+library(visreg)
+visreg(lm_mod, "cemento", "water", gg = TRUE) + theme_minimal()
+```
+
+¿Qué podemos observar del gráfico anterior? Existe una relación inversa entre la resistencia y la interacción de agua y cemento. Mientras menor es la cantidad de agua y mayor sea la cantidad de cemento, la resistencia será mayor.
+
+Ahora transformemos nuestros datos a la misma escala...
+
+```{r Transformación de dadores}
+#Datos en la misma escala
+concreto[, 1:8] <- scale(concreto[, 1:8]) # Modificaremos la escala estandarizando los datos
+
+# prueba de tren
+set.seed(64) # Fijamos semilla
+split <- initial_split(concreto, prop = 0.8) # Dividimos los datos en entrada y prueba
+train <- training(split) # Almacenamos nuestros datos de entrenamiento
+test <- testing(split) # Almacenamos nuestros datos de prueba
+
+# modelo lineal sin interacciones
+lm_mod1 <- lm(strength ~ ., data = train) # Entrenamos un ML sin interacciones
+lm_mod1 %>% summary() # Resultados del modelo
+
+# Con interacción
+lm_mod2 <- lm(strength ~ (.) ^ 2, data = train)
+lm_mod2 %>% summary()
+```
+
+Todas las variables inciden de forma significativa en la resistencia del cemento; aunque destaca la mayor magnitud del coeficiente de cemento.
+
+Al incluir las interacciones de dos vías, los coeficientes de algunas variables se ven alterados como en el caso de la edad (en días) del cemento.
+
+```{r Predicciones}
+# Predicciones
+lm_preds1 <- lm_mod1 %>% predict(test[, 1:8]) # Del modelo 1 con los datos de prueba
+lm_preds2 <- lm_mod2 %>% predict(test[, 1:8]) # Del modelo 2 con los datos de prueba
+
+#Comparacion
+Compare <-
+  data.frame( # Creamos un marco de datos
+    y_true = test$strength, # Con las observaciones
+    lm_preds1 = lm_preds1, # Los valores obtenidos con ML versión 1
+    lm_preds2 = lm_preds2 # Los valores obtenidos con ML versión 2
+  )
+```
+
+Sin necesidad de preprocesamiento adicional, la canalización de entrada de tfdatasets termina siendo agradable y breve:
+
+```{r Tamano del lote}
+create_dataset <- function(df, lote_tamaño, barajar = TRUE) {
+  df <- as.matrix(df) # Convertir el data.frame en una matriz
+  ds <-
+    tfdatasets::tensor_slices_dataset(list(df[, 1:8], df[,9, drop = FALSE])) # Crear conjunto de datos cuyos elementos son porciones de los tensores.
+  si (barajar)
+    ds <- ds %>%
+    dataset_shuffle(buffer_size = nrow(df))
+   ds %>%
+    dataset_batch(tamaño_lote = tamaño_lote)
+}
+# solo una opcion posible para el tamano del lote...
+tamaño_lote <- 64
+tren_ds <- create_dataset(tren, lote_tamaño = lote_tamaño)
+test_ds <- create_dataset(test, batch_size = nrow(test), shuffle = FALSE)
+```
+
+Ahora entrenemos el modelo usando GP:
+
+```{r Modelo}
+bt <- import("integrados")
+RBFKernelFn <- reticulado::PyClass(
+  "NúcleoFn",
+  heredar = tensorflow::tf$keras$capas$Capa,
+  lista(
+    `__init__` = función(auto, ...) {
+      kwargs <- lista(...)
+      super()$`__init__`(kwargs)
+      tipod <- kwargs[["tipod"]]
+      self$`_amplitud` = self$add_variable(initializer = initializer_zeros(),
+                                            dtipo = dtipo,
+                                            nombre = 'amplitud')
+      self$`_length_scale` = self$add_variable(initializer = initializer_zeros(),
+                                               dtipo = dtipo,
+                                               nombre = 'longitud_escala')
+      NULO
+    },
+    llamada = función (uno mismo, x, ...) {
+      X
+    },
+    kernel = bt$propiedad(
+      reticular::py_func(
+        función (uno mismo)
+          tfp$math$psd_kernels$ExponentiatedQuadratic(
+            amplitud = tf$nn$softplus(matriz(0.1) * self$`_amplitud`),
+            longitud_escala = tf$nn$softplus(matriz(2) * self$`_longitud_escala`)
+          )
+      )
+    )
+  )
+)
+```
+
+```{r Seleccionar muestra aleatoria}
+num_induciendo_puntos <- 50
+muestra_dist <- tfd_uniform(bajo = 1, alto = nrow(tren) + 1)
+muestra_ids <- muestra_dist %>%
+  tfd_sample(núm_puntos_inductores) %>%
+  tf$cast(tf$int32) %>%
+  como.numeric()
+puntos_de_muestra <- tren[ids_de_muestra, 1:8]
+k_set_floatx("float64")
+```
+
+Ahora si entrenemos el modelo...
+
+```{r Modelo}
+modelo <- keras_modelo_secuencial() %>%
+  capa_densa(unidades = 8,
+              forma_entrada = 8,
+              use_bias = FALSO) %>%
+  capa_variacional_gaussiana_proceso(
+    num_induciendo_puntos = num_induciendo_puntos,
+    proveedor_del_núcleo = RBFKernelFn(),
+    forma_evento = 1,
+    inducing_index_points_initializer = initializer_constant(as.matrix(sampled_points)),
+    unconstrained_observation_noise_variance_initializer =
+      constante_inicializador(matriz(0.1))
+  )
+
+# El peso de KL suma uno en cada ciclo (época)
+kl_weight <- tamaño_lote / nrow(tren)
+
+# Pérdida que implementa el algoritmo VGP
+pérdida <- función(y, rv_y)
+  rv_y$pérdida_variacional(y, kl_peso = kl_peso)
+
+# modelos
+modelo %>% compile(optimizador = Optimizer_adam(lr = 0.008),
+                  pérdida = pérdida,
+                  métricas = "mse")
+historial <- modelo %>% ajuste (tren_ds,
+                         épocas = 100,
+                         validación_datos = test_ds)
+trama (historia)
+tfp$math$psd_kernels$ExponentiatedQuadratic(
+  amplitud = tf$nn$softplus(matriz(0.1) * self$`_amplitud`),
+  longitud_escala = tf$nn$softplus(matriz(2) * self$`_longitud_escala`)
+)
+```
+
+Predicciones del modelo...
+
+```{r Predicciones}
+yhats <- model(tf$convert_to_tensor(as.matrix(test[, 1:8])))
+yhat_samples <- yhats %>%
+  tfd_muestra(10) %>%
+  tf$apretar() %>%
+  tf$transponer()
+
+sample_means <- yhat_samples %>%
+  aplicar (1, media)
+comparar <- comparar %>%
+  cbind(vgp_preds = sample_means)
+
+ggplot(comparar, aes(x = y_true)) +
+  geom_abline(pendiente = 1, intersección = 0) +
+  geom_point(aes(y = vgp_preds, color = "VGP")) +
+  geom_point(aes(y = linreg_preds1, color = "simple lm"), alfa = 0.4) +
+  geom_point(aes(y = linreg_preds2, color = "lm con interacciones"), alfa = 0.4) +
+  escala_color_manual("",
+                      valores = c("VGP" = "negro", "película simple" = "cian", "película con interacciones" = "violeta")) +
+  coord_cartesian(xlim = c(min(comparar$y_verdadero), max(comparar$y_verdadero)), ylim = c(min(comparar$y_verdadero), max(comparar$y_verdadero))) +
+  ylab("predicciones") +
+  tema(aspecto.relación = 1)
+
+mse <- función(y_true, y_pred) {
+  suma((y_verdadero - y_pred) ^ 2) / longitud(y_verdadero)
+}
+
+lm_mse1 <- mse(comparar$y_true, comparar$linreg_preds1) # 117.3111
+lm_mse2 <- mse(comparar$y_true, comparar$linreg_preds2) # 80.79726
+vgp_mse <- mse(comparar$y_true, comparar$vgp_preds) # 58.49689
+
+muestras_df <-
+  data.frame(cbind(comparar$y_true, as.matrix(yhat_samples))) %>%
+  reunir (clave = ejecutar, valor = predicción, -X1) %>%
+  renombrar(y_true = "X1")
+
+ggplot(muestras_df, aes(y_true, predicción)) +
+  geom_point(aes(color = correr),
+             alfa = 0.2,
+             tamaño = 2) +
+  geom_abline(pendiente = 1, intersección = 0) +
+  tema(leyenda.posicion = "ninguno") +
+  ylab("predicciones repetidas") +
+  tema(aspecto.relación = 1)
+```
+
+

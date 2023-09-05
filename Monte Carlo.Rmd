@@ -1,0 +1,104 @@
+---
+title: "Monte Carlo"
+author: "Aura Gonzalez"
+date: "4/23/2022"
+output: pdf_document
+---
+
+
+```{r, echo=FALSE, warning=FALSE}
+library(tidyverse)
+library(magrittr)
+```
+
+
+El método Monte Carlo es un algoritmo basado en el muestreo aleatorio de varias distribuciones con la finalidad de estimar la probabilidad o distribución de un resultado específico. Este algoritmo está basado en grandes grupos de números, lo anterior implica que una media muestral para una muestra aleatoria grande tenderá a estar cerca del valor predicho de la distancia que se está muestreando.
+
+Este método es adecuado cuando otros enfoques son difíciles o imposibles de usar, como por ejemplo: el análisis de sensibilidad, la fijación de precios de opciones, la medición del riesgo financiero y las aplicaciones de gestión de riesgos.
+
+Supongamos que f(x) es una función que tiene una integración en el intervalo cerrado [a,b], entonces la integral $\int_a^b f(x) dx$ da el área de la región limitada por (a,b).
+
+
+
+**Integración de Monte Carlo**
+
+La integración de Monte Carlo toma una serie de puntos aleatorios que se utilizan para calcular el área bajo una curva o en una ecuación integral definida. A medida que aumenta el número de puntos aleatorios, más precisa se vuelve nuestra integración.
+
+* Por ejemplo, para aproximar la integral $\int_0^2x^2+1 dx$ usando el método de Monte Carlo, agotamos los siguientes pasos:
+
+1. Creamos una variable media y le asignamos el valor 0.
+2. Realizamos un *for loop* que ejecutará los comandos para generar nuestras variables aleatorias utilizando la distribución uniforme.
+3. Promediamos todas las medias que generamos a partir de nuestras variables aleatorias.
+
+
+**Aplicación al análsis de riesgos**
+
+Se realiza ejecutando repetidamente un modelo en un resultado simulado basado en *inputs* variables. Una estrategia común, pero poderosa para modelar la incertidumbre es muestrear aleatoriamente valores de una distribución de probabilidad. Lo anterior, nos permite crear miles de conjuntos de *inputs* para nuestro modelo y ejecutar miles de permutaciones, que deriva en los siguientes beneficios:
+
+* El *output* es un gran conjunto de resultados. Por lo que tenemos un rango de probabilidad de resultados en lugar de simplemente una estimación de un solo punto.
+* Monte Carlo genera una distribución de resultados simulados. Esto facilita la representación gráfica y la comunicación de los resultados.
+* Es fácil cambiar los supuestos de los modelos variando el tipo de distribución o las propiedades del *input*.
+* Puede modelar fácilmente la correlación entre las variables del *input*.
+
+Una situación en la que Monte Carlo es apropiado es cuando se intenta representar una secuencia de decisiones que están influenciadas por factores externos de riesgo estocásticos.  
+
+En el siguiente ejemplo, se modelará un problema de asignación de activos en el que se **decidirá qué parte de la riqueza debe asignarse a inversiones sin riesgo o inversiones de alto riesgo en múltiples períodos de tiempo discretos**. En esta simulación, los rendimientos del período anterior contribuyen a los rendimientos del período siguiente. Esto significa que un modelo de un solo punto es inapropiado.
+
+En este ejemplo, hay dos fuentes de incertidumbre:
+
+* El retorno incierto del activo riesgoso
+* Cuánto destinar a cada tipo de inversión
+
+El siguiente fragmento de código muestra una función simple que calcula los rendimientos en función de diferentes asignaciones de activos.
+
+```{r  Funcion para el retorno}
+calculate_return <- function(alpha) { # En funcion  alpha (0,1)
+  risk_free_rate <- 1.03 # Tasa libre de riesgo
+  risky_rate <- rnorm(1) * 0.05 + 1 # Tasa activo con riesgo
+  (1 - alpha) * risk_free_rate + alpha * risky_rate  # Dependiendo del alpha se asignará mayor o menor proporcion a los activos sin riesgos
+}
+```
+
+Ahora que tenemos un modelo configurado, podemos comenzar a ejecutarlo.
+
+El siguiente código ejecuta 1000 ejecuciones del modelo durante doce períodos de tiempo discretos.
+
+```{r Simulacion del modelo}
+no.simulaciones <- 1000
+periodo.decision <- 12
+
+simulaciones <- rerun(no.simulaciones, 
+                      replicate(periodo.decision, 
+                                runif(1) 
+                                %>% 
+                                  calculate_return())) %>%
+  set_names(paste0("sim", 1:no.simulaciones)) %>%
+  map(~ accumulate(., ~ .x * .y)) %>%
+  map_dfr(~ tibble(value = .x, step = 1:periodo.decision), .id = "simulacion")
+
+simulaciones %>%
+  ggplot(aes(x = step, y = value)) +
+  geom_line(aes(color = simulacion)) +
+  theme(legend.position = "none",
+        panel.background = element_blank()) +
+  ggtitle("Simulaciones de retorno para la asignación de recursos")
+```
+
+
+* Generación de las estadísticas resumen
+
+```{r Resumen}
+resumen.resultado <- simulaciones %>%
+  group_by(step) %>%
+  summarise(retorno_medio = mean(value), 
+            retorno_max = max(value), 
+            retorno_min = min(value)) %>%
+  gather("series", "value", -step)
+
+resumen.resultado %>%
+  ggplot(aes(x = step, y = value)) +
+  geom_line(aes(color = series)) +
+  ggtitle("Valores medios de la simulación") +
+  theme(panel.background = element_blank()) 
+```
+
