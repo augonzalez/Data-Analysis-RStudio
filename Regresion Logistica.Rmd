@@ -1,0 +1,248 @@
+---
+title: "Regresion Logistica"
+author: "Aura Gonzalez"
+date: "1/13/2022"
+output: html_document
+---
+
+
+La **regresión logística** es nombrada por la función subyacente conocida como sigmoide o logística. Esta función tiene una curvatura de S y puede tomar valores entre 0 y 1; siendo óptimos para modelar eventos dicotómicos o binarios. 
+
+
+La regresión logística forma parte de la familia de modelos lineales generalizados, al igual que la regresión lineal. No obstante, a diferencia de esta última, la regresión logística tiene la capacidad de modelar eventos binarios donde el producto está definido entre 0 y 1. 
+
+¿Cómo sucede? RL toma las probabilidades de registro del evento (de Bernoulli (fallo/exito)) como expresa la expresión siguiente:
+
+$Z_i = ln(p_i/1-p_i) = \alpha+\beta_1x_1+...+\beta_nx_n$ 
+$P_i = E(y=1|x) = e^{z}/1+e^{z} = e^{\alpha+\beta_nx_n}/1+e^{\alpha+\beta_nx_n}$ 
+
+donde $p_i$ es la probabilidad de ocurrencia de i. Entonces, tenemos que $p$ siempre se encuentra entre 0 y 1.
+Los parámetros desconocidos $\beta_n$ son usualmente estimados a través de máxima verosimilitud.
+
+En esencia, la regresión logística clasifica las observaciones de una base de datos en dos clases de acuerdo con el umbral de probabilidad dado (0.5) haciendo uso de una variable binaria como variable dependiente y tanto de variables continuas como categóricas como variables independientes. 
+
+#### Data
+Utilizaremos el dataset BreastCancer del paquete `mlbench` que contiene una colección de datos reales y artificiales ideales para realizar ejercicios de Machine Learning. Este dataset tiene 699 observaciones con 11 features o variables sobre el cancer de mama.
+
+```{r}
+
+library(mlbench)
+library(tidyverse)
+library(magrittr)
+data("BreastCancer") #Cargar la data al environment
+str(BreastCancer)
+ncol(BreastCancer[sapply(BreastCancer,is.factor)]) # 10 de las 11 variables son factores
+```
+
+#### Preparación de los datos
+```{r}
+head(BreastCancer)
+tail(BreastCancer)
+
+## NAs
+BreastCancer %>% 
+  is.na() %>% 
+  colSums() # La variable Bare.nuclei contiene 16 NAs
+
+## Conservar solo casos completos
+breast_cancer <- BreastCancer[complete.cases(BreastCancer),] # Indice con las observaciones completas (sin NAs)
+
+## Convertir Class a 0 y 1
+breast_cancer[sapply(breast_cancer,is.factor)] <- sapply(breast_cancer[sapply(breast_cancer,is.factor)], as.numeric)
+breast_cancer %<>% 
+  mutate(Class = factor(ifelse(Class == 1,0, 1),
+                           levels = c(0,1)))
+```
+* Eliminamos 16 observaciones que contenían valores faltantes.
+* Convertimos Class en un factor con niveles 0 y 1
+
+#### EDA
+
+```{r}
+## Casos de cancer
+breast_cancer %>% 
+  ggplot(aes(Class, fill = Class)) +
+  geom_bar(position = "identity") +
+  labs(y = "Frecuencia", x = "Clase", title = "Distribución de casos") +
+  theme(panel.background = element_blank(),
+        legend.position = "none")
+
+breast_cancer %>% 
+  ggplot(aes(Class, fill = Cell.size)) +
+  geom_bar(position = "fill") +
+  labs(y = "Frecuencia", x = "Clase", title = "Distribución de casos") +
+  theme(panel.background = element_blank())
+
+breast_cancer %>% 
+  ggplot(aes(Class, fill = Cell.shape)) +
+  geom_bar(position = "fill") +
+  labs(y = "Frecuencia", x = "Clase", title = "Distribución de casos") +
+  theme(panel.background = element_blank())
+
+breast_cancer %>% 
+  ggplot(aes(Class, fill = Cl.thickness)) +
+  geom_bar(position = "fill") +
+  labs(y = "Frecuencia", x = "Clase", title = "Distribución de casos") +
+  theme(panel.background = element_blank())
+```
+
+
+#### Especificación del modelo 
+
+El primer paso antes de especificar la relación que vamos a modelar, es dividir nuestro dataset en datos de entrenamiento y prueba. Dispondremos el 70% como nuestro trainData y el restante 30% como testData.
+
+```{r Part. datos}
+set.seed(1234)
+index <- caret::createDataPartition(breast_cancer$Class, p=0.7, list = FALSE)
+trainData <- breast_cancer[index,]
+testData <- breast_cancer[-index,]
+```
+
+**Distribución de los casos en el conjunto de entrenamiento**
+```{r}
+table(trainData$Class)
+table(testData$Class)
+```
+
+Para entrenar el modelo en R, utilizaremos la función `glm` nombrada por sus siglas en ingles *Generalized Linear Models*. Esta función se compone de los siguientes argumentos (principales):
+* `formula`, donde especificamos la relación a modelar.
+* `family`, distribución del error y de la función de enlace, en este caso "binomial".
+* `data`, el conjunto de datos de entrenamiento.
+
+```{r Model}
+mod1 <- glm(Class ~ Cl.thickness + Cell.size + Cell.shape, family = "binomial", data = trainData)
+```
+
+Podemos ver el detalle de nuestro modelo utilizando la función `summary`:
+
+```{r}
+summary(mod1)
+anova(mod1)
+```
+
+En este `summary`, los p-values constituyen uno de los resultados más relevantes. La evidencia arroja que a un nivel de significancia del 5% (con los p-values por debajo de este valor), todas las variables especificadas en el modelo son significativas.
+
+#### Verificación de supuestos
+
+1. Variable dependiente binaria, multinomial u ordinal
+
+Para utilizar el modelo de regresión logística como especificamos al inicio la variable independiente debe ser binaria, multinomial u ordinal.
+
+```{r 1er supuesto}
+unique(breast_cancer$Class) #Valores únicos
+unique(breast_cancer$Cl.thickness) #Valores únicos
+unique(breast_cancer$Cell.shape) #Valores únicos
+```
+
+2. Linealidad 
+
+Otro supuesto que debe verificarse en la relación lineal entre las variables continuas y el log odds (o pronóstico del logit). Para verificar si se cumple podemos realizar un analisis visual o realizar la prueba Box-Tidwell.
+
+```{r Análisis visual}
+linearlogit <- glm(Class ~ Cl.thickness + Cell.size + Cell.shape, family = "binomial", data = breast_cancer)
+bchats <- predict(linearlogit, type = "response")
+bchats_class <- ifelse(bchats > 0.5, 1,0)
+table(bchats_class)
+predictors <- colnames(breast_cancer[,2:4])
+data_lineal <- breast_cancer %>% 
+  select(c(Cell.shape,Cell.size, Cl.thickness, Class))
+data_lineal %<>%
+  mutate(logit = log(bchats/(1-bchats))) %>% 
+  gather(key = "predictors", value = "predictor.value", -logit)
+
+#Grafica
+ggplot(data_lineal, aes(logit, predictor.value))+
+  geom_point(size = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess") + 
+  theme_bw() + 
+  facet_wrap(~predictors, scales = "free_y")
+
+
+library(car)
+# boxTidwell(y ~ x, family = "binomial", data = trainData)
+```
+
+3. Valores con influencia
+
+En este paso, verificaremos la presencia de valores atípicos que pudieran alterar la calidad del modelo. Verificaremos este supuesto utilizando la distancia de Cook y los residuos estandarizados del modelo. 
+
+```{r Cooks distance}
+cdistance <- cooks.distance(mod1)
+influential <- cdistance[(cdistance > (3 * mean(cdistance, na.rm = TRUE)))]
+influential
+plot(mod1, which = 4, id.n = 3)
+```
+
+```{r SR}
+model.data <- broom::augment(mod1) %>% 
+  mutate(index = 1:n()) 
+model.data %>% top_n(10, .cooksd)
+ggplot(model.data, aes(index, .std.resid)) + 
+  geom_point(aes(color = Class), alpha = .5) +
+  theme_bw()
+model.data %>% 
+  filter(abs(.std.resid) > 3)
+```
+
+Tenemos 3 valores de influencia, en el caso de que estuviesemos trabajando con variables continuas deberíamos:
+1. Remover las observaciones.
+2. Transformar
+3. Utilizar métodos no paramétricos
+
+4. Multicolinealidad
+
+Se verifica la existencia de multicolinealidad cuando más de dos de nuestras variables predictivas están fuertemente correlacionada. La presencia de estas variables redundantes no nos permite obterner estimadores correctos. 
+
+En R podemos verificar la presencia de multicolinealidad utilizando la función `vif`. 
+
+
+```{r Multicolinealidad}
+vif(mod1)
+```
+
+
+Como regla de oro, tenemos que valores entre 5 y 10 indican la presencia de un problema de multicolinealidad. En el nuestro caso, tenemos la evidencia para afirmar que nuestro modelo no viola este supuesto.
+
+#### Diagnostico fuera de muestra
+
+```{r Valores proy. y actuales}
+#Proyectados fuera de muestra
+bchats <- predict(mod1, newdata = testData, type = "response")
+bchats_class <- factor(ifelse(bchats > 0.5, 1,0),
+                       levels = c(0,1))
+table(bchats_class)
+bchats_link <- predict(mod1, newdata = testData, type = "link")
+score_data <- data.frame(link = bchats_link,
+                         response = bchats,
+                         class = testData$Class,
+                         stringsAsFactors = FALSE)
+score_data %>% 
+  ggplot(aes(link, response, col = class)) +
+  geom_point() +
+  theme(panel.background = element_blank())
+
+
+#Actuales fuera de muestra
+bc_actuals <- testData$Class
+```
+
+Ahora construiremos la matriz de confusión, compuesta por:
+1. Precisión (*Accuracy*): es una medida indicativa de la calidad del modelo. Corresponde al ratio de verdaderos negativos (TN) y positivos (TP) entre el total de casos.
+ $Accuracy = {TP + TN}/{TP+FP+TN+FN}$
+2. Kappa: es una medida que compara la precisión observada con una esperada (aleatoria).
+3. Sensitivity: medida de que bien se predicen los casos positivos. Se calcula como el número de verdaderos positivos entre el total de casos positivos (incluidos los falsos positivos).
+4. Specificity: medida que refiere a que tan bien son pronosticados los casos negativos. Se calcula como el número de verdaderos negativos entre el total de casos negativos (incluidos los falsos negativos).
+
+
+```{r Confusion Matrix}
+library(caret)
+confusionMatrix(bchats_class,bc_actuals)
+```
+
+#Curva ROC
+```{r ROC}
+library(ROCR)
+pred <- prediction(bchats, bc_actuals)
+perf <- performance(pred,"tpr","fpr")
+plot(perf)
+```

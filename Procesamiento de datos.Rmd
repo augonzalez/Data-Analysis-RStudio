@@ -1,0 +1,262 @@
+---
+title: "Procesamiento de Datos"
+author: "Aura Gonzalez"
+date: "11/23/2021"
+output: pdf_document
+---
+
+La limpieza de datos (data cleaning) consiste en transformar los datos sin procesar (bruto), en datos consistentes que pueden ser analizados. El objetivo de este paso es mejorar el contenido de la base de datos, y por tanto obtener estadísticas más fiables.
+
+Formalmente, podemos encontrar tres pasos que se engloban dentro de este proceso:
+
+1. **Detección de inconsistencias**: encontrar observaciones que violan restricciones. Por ejemplo, existen variables que son no negativas, por tanto la presencia de un número negativo constituye una inconsistencia, tal es el caso de la edad.
+
+2. **Selección de los casos que tiene inconsistencia o error**. Escoger para procesar aquellos campos en los que fueron encontrados inconsistencias. Este paso es particularmente complejo cuando se trabaja con una gran cantidad de datos.
+
+3. **Corrección**. Modificación mediante un método deterministico (basado en modelos) o estocastico (basado en estadístico o distribuciones de probabilidad).
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+pckg_check <- function(x){
+  if(!require(x, character.only = TRUE)) {
+    install.packages(x, dependencies = x)
+    library(x, character.only = TRUE)
+  }
+    }
+pckgs <- c("tidyverse","magrittr","car","readxl", "caret") 
+lapply(pckgs, pckg_check)
+```
+
+#### Data
+
+ trabajaremos con el dataset *Income*  que recoge información sobre el ingreso de 44,865 personas. Además recoge datos sobre la edad, sexo, nivel educativo y otras variables que podrían ayudar a explicar el nivel de ingresos de las personas encuestadas.
+
+```{r Cargar la data}
+path <- "/Users/Aura/Desktop"
+setwd(path)
+getwd()
+income <- read.csv("income.csv") #Cargando los datos que se encuentran en formato delimitado por coma.
+str(income) #Observando la estructura de los datos
+head(income, 10) #Primera 10 observaciones
+tail(income, 10) #Última 10 observaciones
+```
+
+El dataset contiene 44,856 observaciones y 15 variables, de las cuales 7 son de tipo númerico y el restante de caracteres. Al observar las primeras y últimas observaciones de la data podemos ver a priori que existe valores faltantes en al menor una de las variables (age).
+
+#### Detección de valores faltantes (Missing values)
+El primer paso que agotaremos es detectar las variables que contienen *missing values*, para posteriormente seleccionar una estatregia resolver el problema.
+
+```{r MV detección}
+library(tidyverse)
+income %>% 
+  select(everything()) %>% #Seleccionar todas las variables
+  summarise_all(funs(sum(is.na(.))))  #Conteo de los NA
+#Otra alternativa
+library(tidyverse)
+income %>% 
+  is.na() %>% #Si existen NA
+  colSums() #Suma de los valores verdaderos en cada columna
+```
+En efecto, cuatro (4) variables contienen *missing value*: `age`,`workclass`,`occupation` y `native.country`. 
+
+Ahora debemos definir que estrategia seguir para resolver este problema. Entre las alternativas podriamos evaluar eliminar completamente las observaciones que contienen valores faltantes. No obstante, al deshacernos de estas observaciones perdemos poder estadístico (reducir las obs y por tanto el poder de nuestros estadísticos) y obtener resultados sesgados. Por otro lado, los datos que estamos eliminando podrían contener información de relevancia para el fenómeno analizado.
+
+Por lo anterior, debemos conocer qué tipos de NAs existen:
+ * **Missing values no aleatorios** La presencia de *missing values* depende de los propios *missing values*. Por ejemplo, existen preguntas con connotación negativa para el encuestado que suelen evitarse. Imagine que en una clase se aplica una encuesta para evaluar el desempeño de los profesores, algunos estudiantes pueden sentir que responder ciertas preguntas sobre el comportamiento del instructor o rendimiento en el aula puede repercutir en sus calificaciones por lo que optan no responder. En este caso, si eliminamos todos las observaciones con valores faltantes podríamos obtener resultados muy positivos, que no necesariamente se corresponden con la realidad.
+ 
+ * **Missing values aleatorios** La presencia de *missing values* depende de otras observaciones. Por ejemplo, en algunas ocasiones las preguntas tiene un nivel de dificultad elevado para el encuestado, por lo cual opta por no responder. Proceder con una estrategia de eliminación en este caso nos acerca a un más a un resultado sesgado. En este caso podríamos imputar los valores utilizando otros datos.
+ 
+ * **Missing value completamente aleatorios ** La presencia de *missing values* es aleatoria. Por ejemplo, debido a una factor externo la encuesta no pudo finalizarse, los valores faltantes se dicen aleatorios.
+ 
+En el caso de la edad los valores faltantes son aleatorios, pues corresponden a un error del encuestador. Por lo anterior, podríamos eliminarlos o imputarlos con otra información de la data.
+
+```{r Eliminación de Missing Values}
+data <- income %>%
+  drop_na(age) #Eliminar las obs con NA en age
+#Veficando la presencia de NAs
+data %>% 
+  select(age) %>%
+  is.na() %>%
+  colSums()
+#Otra forma
+sum(is.na(data$age))
+```
+
+```{r Imputación}
+income$age <-  #Sobreesribir en la variable age
+  ifelse(is.na(income$age), #Si la variable age contiene NAs
+         ave(income$age, FUN = function(x)mean(x, na.rm = TRUE)), #En caso de ser cierta la condición sustituir por la media
+         income$age)  #De no cumplirse conservar los valores de age
+sum(is.na(income$age)) #Comprobar la existencia de NAs
+head(income,10)
+```
+
+Podemos imputar nuestra data utilizando herramientas del paquete `Amelia`.
+
+```{r Imp con Amelia}
+library(Amelia)
+?amelia #Utilizando bootstrap imputa los datos faltantes.
+# res_amelia <- amelia(income, m = 2, noms = c("workclass","marital.status", "occupation", "relationship", "race","gender", "native.country"), ords = c("education")) #Una de las categorías contiene más de 10 cat únicas por lo que no puede imputarse
+```
+
+```{r Drop NA}
+income %<>%
+  drop_na() #Eliminando todos los NAs de la base
+#Veficando la presencia de NAs
+income %>% 
+  is.na() %>%
+  colSums()
+```
+
+#### Codificando variables categóricas
+Por codificar nos referimos a transformar variables categóricas en númericas. Mantener el texto para realizar nuestra análisis, incluyendo el modelo, puede generar problemas. Por lo anterior, convertiremos de `chr` a `factor` las 8 variables categóricas del dataset.
+
+```{r Convert}
+income[sapply(income, is.character)] <- lapply(income[sapply(income, is.character)], as.factor) #Del lado izq seleccionamos todas las variables de la data que son chr, para convertirlas en factor (lado izquierdo)
+str(income)
+levels(income$workclass) #Mostrar los niveles de la variable workclass
+levels(income$education) #Mostrar los niveles de la variable workclass
+```
+En ocasiones trabajamos con data naturaleza categórica, pero que se encuentra codificada de forma númerica sin incluir las etiquetas.
+
+```{r Etiquetas}
+data$educational.num[data$educational.num == 9] <- "HS-grad" #En el lado derecho especificamos que queremos seleccionar la variable educactional.num, especificamente el valor 9, y asignarle "HS-grad
+table(data$educational.num)
+data <- income #Actualizamos el dataset
+
+#Para variales ordinales:
+data$educational.num <- as.factor(data$educational.num) #Declarar educational.num como factor
+data$educational.num <- ordered(data$educational.num,
+         levels = c(1:16), #Especificar los niveles
+         labels = c("Preschool", "1st-4th","5th-6th","7th-8th","9th","10th","11th","12th",
+                    "HS-grad", "Some-college", "Assoc-voc", "Assoc-acdm", "Bachelors", "Masters",
+                    "Prof-school","Doctorate")) #Especificar en orden las etiquetas para cada uno de los nivesles
+table(data$educational.num)
+```
+
+En el caso de variables nominales se recomienda utilizar `factor`.
+
+#### Variables String 
+Con `stringr` podemos encontrar patrones en las variables texto o reemplazar un patrón por otro.
+
+```{r Manipulación de variables texto}
+library(stringr)
+str_trim(" procesamiento de datos") #Remueve espacios al final e inicio de la oración
+str_pad(112, width = 6, side = "left", pad = 1) #Completar un caracter de longitud 6 con 1
+toupper(data$workclass) #A Mayuscula
+tolower("Procesamiento de datos") #Minuscula
+```
+
+```{r Patrones texto}
+sum(str_count(income$workclass, "gov")) #Base format
+#Tidyverse
+income %>% #Llamando base de datos
+  select(workclass) %>%  #Seleccionando la variable `workclass`
+  group_by(workclass) %>% #Agrupando por la variable `workclass`
+  count() #Conteo de las categorías
+
+#Conteo de palabras con gov
+income %>%  #Llamando base de datos
+  filter(str_detect(workclass, pattern = "gov")) %>% #Seleccionando la variable `workclass`
+  summarise(n()) #Conteo
+
+#Conteo de palabras con gov
+income %>%  #Llamando base de datos
+  mutate(workclass = ifelse(str_detect(workclass, pattern = "gov"),
+                            "government-emp",
+                            workclass)) %>% 
+  group_by(workclass) %>%
+  count() #Seleccionando la variable `workclass`
+```
+
+#### Fechas
+
+
+```{r Fecha}
+dates <- c("01-01-2022","04-01-2022","21-01-2022","25-01-2022")
+as.POSIXct(dates, format = "%d-%m-%Y") #Declaramos el vector dates como un vector de fechas en formato "01-01-2022".
+as.Date(dates, format = "%d-%m-%Y")
+```
+
+#### Outliers 
+
+Los valores atípicos (o outliers en inglés) son observaciones (una o varias) que no son consistentes con el comportamiento de los demas datos del conjunto. Estos valores pueden distorsionar los resultados que obtenemos, como por ejemplo, obtener una media sesgada. 
+
+**La mediana es estadístico que no está influenciado por los valores extremo**
+
+Contamos con dos métodos para confirmar las presencias de outliers. Primero un análisis gráfico utilizando un gráfico de caja y bigotes (boxplot). En ese se muestra Q1 (el percentil 25), Q2 (el percentil 50 (Mediana)), Q3 (percentil 75) y los valores mínimo y máximos.
+
+Podemos construir un boxplot utilizando la función `boxplot()` de BaseR o usando la `ggplot()` de tidyverse.
+
+```{r Boxplot}
+boxplot(income$fnlwgt) # Podemos observar la presencia de outliers
+boxplot(income$fnlwgt)$out #Devuelve un vector con los valores atípicos
+#Con ggplot
+income %>% 
+  ggplot(aes(fnlwgt)) + #Colocamos las coordenadas
+  geom_boxplot() + #Especificamos la geometría
+  labs(title = "Boxplot del ingreso")
+
+
+income %>% 
+  ggplot(aes(workclass,fnlwgt)) + #Colocamos las coordenadas veremos la distriución del ingreso según categoría laboral
+  geom_boxplot() + #Especificamos la geometría
+  labs(title = "Boxplot del ingreso")
+```
+
+En este caso que la distribución es asimétrica (positiva), el boxplot no brinda resultados confiables, al igual que en casos donde es exponencial o log-normal. En estos casos se recomienda transformar los datos a una serie logaritmica, calcular la raíz cuadrada o escoge un método que considere la asimetría de los datos como Hiridoglou y Berchelot.
+
+```{r Dist. de income}
+income %>% 
+  ggplot(aes(fnlwgt)) +
+  geom_histogram(bins = 100) #Histrograma
+```
+
+```{r}
+hboutlier <- function(x,r){ 
+  x <- x[is.finite(x)] #Devuelve el vector x tras comprobar cuales son finitos.
+  stopifnot(  #Indicando un break si el vector tiene una longitud menor que 0 o si todas las x son negativas
+    length(x) > 0,
+    all(x>0) )
+  xref <- median(x)  #La mediana como estadístico de referencia
+  if (xref <= sqrt(.Machine$double.eps)) #Si los valores están muy próximo a cero indicar el warning
+  warning("Reference value close to zero: results may be inaccurate") 
+  pmax(x/xref, xref/x) > r #returna el máximo y mínimo de los valores mayores a r
+}
+v <- hboutlier(data$fnlwgt, median(income$fnlwgt))
+```
+
+##### Inconsistencias
+Otra inconsistencia ocurre cuando los datos no se corresponden a la realidad, p. ej. la edad negativa; trabajadores con menos de 5 o 15 años, etc. Estas situaciones podemos expresarlas como restricciones.
+
+Para esto usaremos el package **editrules**.
+
+```{r editrule}
+library(editrules)
+(E <- (c("age >= 32", "age <= 100"))) #Restricciones sobre la edad
+E
+v <- violatedEdits(E, income) #Guardando una matriz 41626x2 especificando los casos que violan las restricciones impuestas
+table(v) #Resumen
+```
+
+Las inconsistencias podemos eliminarlas, asignarle NAs o imputarlas al igual que los outliers, utilizando la media, un modelo de regresión o otras estrategias.
+
+#### Datos de entrenamiento y prueba
+
+```{r Train y test data}
+# Prep Trainig y Test data
+set.seed(1) #Fijar semilla para que los números que se generen de forma aleatorio puedan reproducirse
+index <- sample(1:nrow(income), 0.8*(nrow(income))) #Generar una muestra aleatoria del 1 hasta la longitud del dataset
+head(index, 15) #Primeras 15 obs.
+testData <- income[-index,]  #Datos de prueba
+trainData <- income[index, ] #Datos de entrenamiento
+
+# Con el paquete caret
+library(caret)
+set.seed(1234)
+index <- createDataPartition(y = income$fnlwgt, #La variable ind
+                             p = 0.8, #Porcentaje de la data que conformará el train data
+                             list = FALSE)
+testData <- income[-index,]  #Datos de prueba
+trainData <- income[index, ] #Datos de entrenamiento
+```
+

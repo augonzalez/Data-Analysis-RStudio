@@ -1,0 +1,185 @@
+---
+title: "Knearest"
+author: "Aura Gonzalez"
+date: "1/13/2022"
+output: html_document
+---
+
+K nearest neighbours (kNN) es un algoritmo de aprendizaje supervisado. Recuerde que los algoritmos supervisados se basan en data etiquetada para aprender una función que produce un resultado apropiado para datos desconocidos que se introducen en el futuro. Por ejemplo, cuando niños nuestros padres intentaban enseñarnos objetos, mostrandonos imagenes o el objeto en sí y repitiendo el nombre; en un inicio nos equivocabamos pero conforme nos exponiamos más al objeto íbamos cometiendo menos errores. Así funcionan los algoritmos de aprendizaje supervisados como el kNN, regresión lineal y logística.
+
+Al igual que algoritmo de regresión logística (de clasificación), la variable dependiente es categorica. 
+
+En esencia, Knn asume que las cosas similares se encuentran cercas. Si volvermos a visuaalizar el ejemplo de vegetales, frutas y proteínas podemos de cierta forma confirmar este enunciado:
+
+```{r Graph}
+library(tidyverse)
+library(ggforce)
+library(tidyquant)
+library(magrittr)
+alimentos %>% 
+  ggplot(aes(sabor, textura)) +
+  geom_text(aes(label = alimento)) +
+  geom_mark_ellipse(aes(fill = tipo)) +
+  labs(title = "Alimentos según textura y sabor", x = "Sabor (1 - Salado, 10 - Dulce)", y = "Textura (1 - Blando, 10 - Crujiente)") +
+  theme(panel.background =  element_blank(),
+        axis.line = element_line(colour = "gray50"),
+        plot.title = element_text(hjust = 0.5))
+```
+
+Como podrán observar los alimentos del mismo tipo se encuentran más cercanos entre sí. Por ejemplo, el pepino está más cerca de la lechuga y el apio, que de la tocineta y la manzana.
+
+kNN captura justamente la idea de similitud basada en la proximidad o distancia entre los objetos, empleando herramientas matemáticas. Basado en la mayoría de votos de sus ks vecinos más cercanos se le asigna la etiqueta a la nueva data.
+
+**En la mayoría de casos prácticos, k suele tomar cualquier valor entre 1 y 30** Sin embargo, k = 1 no es preferible, pues puede resultar en problemas. Suponga que esta realizando la clasificación de vegetales y frutas, e introduce un nuevo punto sin su etiqueta, al establecer k = 1, el objeto más cercano establece la categoría del nuevo punto, frutas. Pero resulta que todos los demás puntos cercanos son vegetales. Si hubiesemos aumentado nuestro k tendriamos un resultado más robusto. En conclusión, cuando reducimos nuestro k a 1, el algoritmo se vuelve menos estable. 
+
+En el caso contrario, cuando incrementamos k, nuestro algoritmo se vuelve más estable y por tanto es más probable obtener resultados robustos.
+
+#### ¿Cuál es el k óptimo?
+
+Para encontrar el k correcto para nuestro conjunto de datos, corremos varias veces nuestro algoritmo kNN con diferentes valores de k. Al final seleccionamos el k que reduce el número de errores que podemos encontrar mientras intentamos clasificar nuestros datos.
+
+
+
+
+#### Medidas de distancia
+
+1. **Distancia euclidiana** Definida como la distancia entre dos puntos en un plano, es la métrica más popular.
+
+
+
+ la distancia entre $P_1$ y $P_2$ se calcula como:
+
+$d = \sqrt{(x_2-x_1)^2+(y_2-y_1)^2}$
+
+2. **Distancia de chebyshev**. La distancia entre dos puntos está dada por la mayor de sus diferencias a lo largo de cualquiera de sus dimensiones.
+
+$max(|x_2-x_1|,|y_2-y_1|)$
+
+3. **Distancia de Manhattan**. La suma absoluta de las diferencias de sus coordenadas.
+
+$|x_2-x_1|+|y_2-y_1|$
+
+
+### Pasos:
+
+1. Cargar los datos.
+2. Procesamiento de datos
+3. Exploración de los datos
+4. Datos de entrenamiento y prueba
+5. Parametro optimo K.
+6. Especificar el algoritmo.
+7. Diagnóstico
+
+##### Carga de datos
+
+En esta ocasión estaremos trabajando con el dataset *iris*, que consta de 150 observaciones y 5 variables que recogen información sobre 3 especies de flores.
+
+```{r Data diamonds}
+data(iris)
+str(iris)
+```
+
+##### Procesamiento de datos
+
+*Chequear la presencia de valores faltantes
+```{r NAs}
+iris  %>% 
+  is.na() %>% 
+  colSums()
+
+View(iris)
+```
+
+* Normalizar datos
+Para medir la distancia entre un punto u otro debemos normalizar nuestros datos. Lo anterior, debido a que contamos con unidades de medidas distintas.
+
+```{r Normalizar datos}
+
+
+normalizar <- function(x){
+  (x - min(x))/(max(x)-min(x))
+}
+#Las variables a normalizar son nuestros predictores
+iris_norm <- as.data.frame(lapply(iris[,c(1:4)], normalizar))
+summary(iris_norm)
+```
+
+##### EDA
+
+```{r}
+#Sépalo
+iris %>% 
+  ggplot(aes(Sepal.Length,Sepal.Width, color = Species)) +
+  geom_point() +
+  labs(y = "Sepal.Width", x = "Sepal.Length", title = "Tamaño y ancho del sépalo según especies") +
+  theme(panel.background = element_blank())
+
+#Petalo
+iris %>% 
+  ggplot(aes(Petal.Length,Petal.Width, color = Species)) +
+  geom_point() +
+  labs(y = "Petal.Length", x = "Petal.Width", title = "Tamaño y ancho del pétalo según especies") +
+  theme(panel.background = element_blank())
+
+#Ancho del sépalo y pétalo
+iris %>% 
+  ggplot(aes(Petal.Width,Sepal.Width, color = Species)) +
+  geom_point() +
+  labs(y = "Petal.Width", x = "Sepal.Width", title = "Ancho del sépalo y petalo según especies") +
+  theme(panel.background = element_blank())
+
+#Longitud del sépalo y pétalo
+iris %>% 
+  ggplot(aes(Petal.Length,Sepal.Length, color = Species)) +
+  geom_point() +
+  labs(y = "Petal.Length", x = "Sepal.Length", title = "Tamaño del sépalo y petalo según especies") +
+  theme(panel.background = element_blank())
+
+
+##Estadísticas descriptivas según especies
+iris %>% 
+  group_by(Species) %>% 
+  summarize(promedio_sep_ancho = mean(Sepal.Width),
+            promedio_sep_longitud = mean(Sepal.Length),
+            promedio_pet_ancho = mean(Petal.Width),
+            promedio_pet_longitus = mean(Petal.Length))
+```
+
+#### Datos de entrenamiento y prueba
+
+```{r}
+library(caret)
+set.seed(12)
+index <- createDataPartition(iris$Species, p = 0.8, list = FALSE)
+iris_target <- iris[index,5]
+iris_test_cat <- iris[-index,5]
+iris_train <- iris_norm[index,]
+iris_test <- iris_norm[-index,]
+```
+
+##### Parametro optimo K.
+
+```{r K}
+library(class)
+i=1   # Para iniciar el loop
+k.optm=1 # Para iniciar el loop
+for (i in 1:15){ 
+    knn.mod <-  knn(train= iris_train, test= iris_test, cl= iris_target, k=i)
+    k.optm[i] <- 100 * sum(iris_test_cat == knn.mod)/NROW(iris_test_cat)
+    k=i  
+    cat(k,'=',k.optm[i],'\n')       # % de Precisión 
+}
+plot(k.optm, type="b", xlab="K- Value",ylab="Nivel de precisión")
+```
+
+##### Especificar el algoritmo.
+
+```{r}
+knn_mod <- knn(train = iris_train, test = iris_test, cl = iris_target, k =5)
+```
+
+##### Diagnostico
+```{r}
+confusionMatrix(knn_mod, iris_test_cat)
+```
+
