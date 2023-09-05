@@ -1,0 +1,374 @@
+---
+title: "RegLogistica"
+author: "Aura Gonzalez"
+date: "10/3/2022"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+
+
+### Regresion logistica y arboles de decision
+
+1. El conjunto llamado Iris de la libreria datasets se compone de 150 observaciones de flores de la planta iris. Existen tres tipos de clases de flores iris: virginica, setosa y versicolor. Hay 50 observaciones de cada una. Las variables o atributos explicativos de estas categorias que se miden de cada flor son:
+
+i. Species: el tipo de flor como variable categorica.
+ii. Petal.Length y Petal.Width: el largo y el ancho del petalo en cm como variables
+numericas.
+iii. Sepal.Length y Sepal.Width: el largo y el ancho del sepalo en cm como variables
+numericas.
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+
+str(iris)
+
+library(tidyverse)
+library(dplyr)
+library(plyr)
+
+datos <- iris
+
+datos$Species <- as.character(datos$Species)
+datos$Species <- revalue(datos$Species, c("setosa" = 0,
+                                          "versicolor" = 1,
+                                          "virginica" = 0))
+
+```
+
+a. Crear un modelo predictivo usando R basado en regresion logistica para predecir el tipo de flor (tres categorias). Use las variables explicativas senaladas.
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+
+datos$Species <- as.numeric(datos$Species)
+
+model1 <- glm(Species ~ Sepal.Length + Sepal.Width+ Petal.Length + Petal.Width, family = "binomial", data = datos)
+
+summary(model1)
+anova(model1)
+```
+
+
+
+
+b. Seleccionar un conjunto de entrenamiento del 100 casos y un conjunto de prueba del restante 50 casos.
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+
+set.seed(1234, kind = "Mersenne-Twister") #Fijamos la semilla 
+index <- caret::createDataPartition(datos$Species, p=2/3, list = FALSE)
+trainData <- datos[index, ]
+testData <- datos[-index, ]
+
+```
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+prop.table(table(trainData$Species))
+prop.table(table(testData$Species))
+```
+
+c. Entrenar el modelo con el conjunto de entrenamiento.
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+mod2 <- glm(Species ~  Sepal.Length  + Sepal.Width+ Petal.Length + Petal.Width, family = "binomial",  data = trainData)
+
+summary(mod2)
+anova(mod2)
+```
+
+
+d. Con el conjunto de prueba realizar la prediccion y construir la tabla de contingencia con los indicadores de precision, exactitud, etc.
+
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+#Proyectados fuera de muestra
+bchats <- predict(mod2, newdata = testData, type = "response")
+bchats_class <- factor(ifelse(bchats > 0.5, 1,0),
+                       levels = c(0,1))
+table(bchats_class)
+
+bchats_link <- predict(mod2, newdata = testData, type = "link")
+score_data <- data.frame(link = bchats_link,
+                         response = bchats,
+                         class = testData$Species,
+                         stringsAsFactors = FALSE)
+score_data %>% 
+  ggplot(aes(link, response, col = class)) +
+  geom_point() +
+  theme(panel.background = element_blank())
+
+#Actuales fuera de muestra
+bc_actuals <- testData$Species
+
+
+
+```
+
+
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+library(caret)
+#confusionMatrix(bchats_class,bc_actuals)
+
+
+```
+
+* Resultados de la matriz de confusión
+
+
+
+El 89.2 % de los casos positivos fue predicho de la forma correcta, mientras este porcentaje se reduce al 67.3% en el caso de los falsos positivos. El modelo tiene un *accuracy* de 87.5%, siendo un modelo bueno.
+
+
+e. Construir la grafica ROC y el calculo del area.
+
+
+#Curva ROC
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+library(ROCR)
+pred <- prediction(bchats, bc_actuals)
+perf <- performance(pred,"tpr","fpr")
+plot(perf)
+```
+
+
+
+f. Realizar un analisis de la performance del modelo. Cuales indicadores le resultan los mejores para este caso. ¿Por que?
+
+El indicador accuracy tiene un valor de 0.7551, lo que nos indica que el modelo fue capaz de predecir con éxito 76% de los datos pronosticados, este valor es bajo para un nivel de precisión aceptable (95%). El indicador Kappa es de 0.4049, por lo que podemos decir que es un modelo de moderada concordancia a escasa. Con lo antes expuesto, concluiríamos que este no es un buen modelo.
+Estos indicadores fueron seleccionados debido a lo siguiente:
+Accuracy: Es una medida indicativa de la calidad del modelo. Si este indicador no es lo suficientemente alto, el modelo no sería el deseado.
+
+
+
+Kappa: Es una medida que compara la precisión observada con una esperada (aleatoria). El mismo caso que el anterior.
+
+g. Puede mejorar el modelo reduciendo las variables explicativas. ¿Cuales son y por que? Pruebelo creando nuevos modelos. Defina el criterio de seleccion del mejor.
+
+# Validar la significancia de las variables del modelo:
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+
+summary(model1)
+```
+
+# Crear modelo sin variables no significativas:
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+
+modelFinal <- glm(Species ~ Sepal.Width, family = "binomial", data = datos)
+
+summary(modelFinal)
+```
+
+
+# Realizar la predicción y construir la tabla de contingencia:
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+#Proyectados fuera de muestra
+bchats <- predict(modelFinal, newdata = testData, type = "response")
+bchats_class <- factor(ifelse(bchats > 0.5, 1,0),
+                       levels = c(0,1))
+table(bchats_class)
+
+bchats_link <- predict(modelFinal, newdata = testData, type = "link")
+score_data <- data.frame(link = bchats_link,
+                         response = bchats,
+                         class = testData$Species,
+                         stringsAsFactors = FALSE)
+score_data %>% 
+  ggplot(aes(link, response, col = class)) +
+  geom_point() +
+  theme(panel.background = element_blank())
+
+#Actuales fuera de muestra
+bc_actuals <- testData$Species
+
+
+
+
+```
+
+
+Luego de realizar varias pruebas y retirar las variables menos significativas, los resultados fueron peores, con un Accuracy de 0.7143.
+
+
+
+
+h. Crear tambien un modelo predictivo usando R basado en arboles de decision para
+predecir el tipo de flor (tres categorias). Use las variables explicativas senaladas.
+
+
+
+**Decision tree*
+
+Los árboles de decisión son algoritmos versátiles de *Machine Learning* que pueden realizar tareas de clasificación y regresión. Son muy potentes, capaces de ajustar conjuntos de datos complejos. Además, son componentes fundamentales de los modelos *random forest*, que se encuentran entre los algoritmos *Machine Learning* más potentes disponibles en la actualidad.
+
+```{r echo=FALSE, warning=FALSE, results=TRUE}
+library(plyr)
+library(caret)
+library(ROCR)
+library(dplyr)
+library(ROSE)
+
+modelo_dt <- rpart::rpart(Species ~ Sepal.Width + Sepal.Length + Petal.Length + Petal.Width, data = trainData)
+
+rpart.plot::rpart.plot(modelo_dt)
+
+```
+
+
+
+###Anexos
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+
+str(iris)
+
+library(tidyverse)
+library(dplyr)
+library(plyr)
+
+datos <- iris
+
+datos$Species <- as.character(datos$Species)
+datos$Species <- revalue(datos$Species, c("setosa" = 0,
+                                          "versicolor" = 1,
+                                          "virginica" = 0))
+
+```
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+
+datos$Species <- as.numeric(datos$Species)
+
+model1 <- glm(Species ~ Sepal.Length + Sepal.Width+ Petal.Length + Petal.Width, family = "binomial", data = datos)
+
+summary(model1)
+anova(model1)
+```
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+
+set.seed(1234, kind = "Mersenne-Twister") #Fijamos la semilla 
+index <- caret::createDataPartition(datos$Species, p=2/3, list = FALSE)
+trainData <- datos[index, ]
+testData <- datos[-index, ]
+
+```
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+prop.table(table(trainData$Species))
+prop.table(table(testData$Species))
+```
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+mod2 <- glm(Species ~  Sepal.Length  + Sepal.Width+ Petal.Length + Petal.Width, family = "binomial",  data = trainData)
+
+summary(mod2)
+anova(mod2)
+```
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+#Proyectados fuera de muestra
+bchats <- predict(mod2, newdata = testData, type = "response")
+bchats_class <- factor(ifelse(bchats > 0.5, 1,0),
+                       levels = c(0,1))
+table(bchats_class)
+
+bchats_link <- predict(mod2, newdata = testData, type = "link")
+score_data <- data.frame(link = bchats_link,
+                         response = bchats,
+                         class = testData$Species,
+                         stringsAsFactors = FALSE)
+score_data %>% 
+  ggplot(aes(link, response, col = class)) +
+  geom_point() +
+  theme(panel.background = element_blank())
+
+#Actuales fuera de muestra
+bc_actuals <- testData$Species
+
+
+
+```
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+library(caret)
+#confusionMatrix(bchats_class,bc_actuals)
+
+
+```
+
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+library(ROCR)
+pred <- prediction(bchats, bc_actuals)
+perf <- performance(pred,"tpr","fpr")
+plot(perf)
+```
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+
+summary(model1)
+```
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+
+modelFinal <- glm(Species ~ Sepal.Width, family = "binomial", data = datos)
+
+summary(modelFinal)
+```
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+
+bchats <- predict(mod2, newdata = testData, type = "response")
+bchats_class <- factor(ifelse(bchats > 0.5, 1,0),
+                       levels = c(0,1))
+table(bchats_class)
+
+bchats_link <- predict(mod2, newdata = testData, type = "link")
+score_data <- data.frame(link = bchats_link,
+                         response = bchats,
+                         class = testData$Species,
+                         stringsAsFactors = FALSE)
+score_data %>% 
+  ggplot(aes(link, response, col = class)) +
+  geom_point() +
+  theme(panel.background = element_blank())
+
+#Actuales fuera de muestra
+bc_actuals <- testData$Species
+
+
+#confusionMatrix(bchats_class,bc_actuals)
+
+```
+
+
+
+
+```{r echo=TRUE, warning=TRUE, results=TRUE}
+
+modelo_dt <- rpart::rpart(Species ~ Sepal.Width + Sepal.Length + Petal.Length + Petal.Width, data = trainData)
+rpart.plot::rpart.plot(modelo_dt)
+
+
+```

@@ -1,0 +1,130 @@
+---
+title: "Random Forest"
+author: "Aura Gonzalez"
+date: "10/5/2022"
+output: pdf_document
+---
+
+
+*Random forest* consiste en una gran cantidad de árboles de decisión individuales que operan como un conjunto. Este modelo se basa en la idea simple del *"the wisdom of crowd"*, en el sentido de que resultados agregados de múltiples predictores resulta en una mejor predicción que el "mejor" predictor individual.
+
+Antes de adentrarnos en el funcionamiento de los random forest es relevante aclarar que esta técnica se conoce como *ensemble learning*. En esencia, *ensemble learning* es enfoque general del *Machine Learning* cuyo objetivo es obtener un mejor desempeño/rendimiento predictivo al combinar predicciones de múltiples modelos.
+
+Aunque existen muchos *ensemble* que se pueden desarrollar para el modelado predictivo, hay tres métodos que dominan el campo de *ensemble learning*. Estas son *bagging*, *stacking*, y *boosting*. ¿En qué consisten?
+
+* **Bagging**, se ajustan muchos árboles de decisión en diferentes muestras del mismo conjunto de datos y se toma el promedio de las predicciones.
+* **Stacking**, implica el ajuste de muchos modelos de tipos diferentes utilizando el mismo *dataset* y usa otro modelo para aprender a combinar mejor las predicciones.
+* **Boosting**, agrega miembros secuencialmente que corrigen las predicciones hechas por  modelos anteriores y genera un promedio ponderado de las predicciones.
+
+*Random forest* es un *ensemble learning* basado en *bagging*. Este algoritmo toma muestras aleatorias de las observaciones de entrenamiento, atributos iniciales de forma aleatoria e intenta construir un modelo. Los pasos son los siguientes:
+
+* Se elijen aleatoriamente **n** muestras de los datos de entrenamiento.
+* Se hace "crecer" un árbol de decisión a partir de una muestra de arranque. En cada nodo del árbol, se selecciona al azar **d** características.
+* Posteriormente, se divide el nodo usando características (variables) que proporcionen la mejor división según la función objetivo. Por ejemplo, maximizando la ganancia de información.
+* Se repiten los pasos 1 a 2, **k** veces (k es la cantidad de árboles que desea crear usando un subconjunto de muestras).
+* Por último, se agrega la predicción por cada árbol para un nuevo punto de datos para asignar la etiqueta de clase por mayoría de votos.
+
+**Recordar.** Una gran cantidad de modelos relativamente no correlacionados (árboles) que funcionan como un comité superarán a cualquiera de los modelos constituyentes individuales.
+
+Un aspecto clave en este punto es la baja correlación entre modelos. La razón es que los árboles se protegen entre sí de sus errores individuales (siempre y cuando no se equivoquen constantemente en la misma dirección). Entonces, cuando algunos árboles se equivoquen, muchos otros estarían apuntando a la senda correcta, por lo que, como grupo, los árboles pueden moverse en la dirección correcta. 
+
+Entonces, los requisitos previos para que el **random forest** funcione bien son:
+
+1. Es necesario que haya alguna señal real en nuestras funciones para que los modelos creados con esas funciones funcionen mejor que las conjeturas aleatorias.
+2. Las predicciones (y por lo tanto los errores) hechas por los árboles individuales deben tener bajas correlaciones entre sí.
+
+Entonces, ¿cómo se garantiza en Random Forest que el comportamiento de cada árbol no esté demasiado correlacionado con el comportamiento de cualquiera de los otros árboles en el modelo?
+
+**Bagging**. Los árboles de decisión son muy sensibles a los datos en los que se entrenan; pequeños cambios en el conjunto de entrenamiento pueden dar como resultado estructuras de árbol significativamente diferentes. El **random forest** aprovecha esto al permitir que cada árbol individual tome muestras aleatorias del conjunto de datos con reemplazo, lo que da como resultado árboles diferentes. 
+
+Cabe resltar que con el **bagging** no estamos subdividiendo los datos de entrenamiento en fragmentos más pequeños y entrenando cada árbol en un fragmento diferente. Más bien, si tenemos una muestra de tamaño N, todavía estamos alimentando a cada árbol con un conjunto de entrenamiento de tamaño N (a menos que se especifique lo contrario). Pero en lugar de los datos de entrenamiento originales, tomamos una muestra aleatoria de tamaño N con reemplazo. 
+
+Entonces, en nuestro **random forest**, terminamos con árboles que no solo están entrenados en diferentes conjuntos de datos , sino que también usan diferentes funciones para tomar decisiones.
+
+**Estimación del tipo de flor**
+
+Utilizando el *dataset* `iris` de la librería *datasets* ilustraremos cómo funciona *random forest*.
+
+```{r Librerías y datos, include=FALSE, echo=FALSE, warning=FALSE}
+pckg <- pckg[!pckg %in% c("arulesViz","arules")]
+pckg <- append(pckg, c("randomForest","caret"))
+sapply(pckg, pckg.check)
+
+#Datos
+data <- iris # Guardamos iris en un nuevo objeto para no sobreescribir el orginal
+iris %>% str() # Estructura de los datos
+data$Species <- as.factor(data$Species)
+data %>%
+  group_by(Species) %>% 
+  count()
+```
+
+Dividiremos los datos de modo que un 70% (106 obs) compongan el conjunto de entrenamiento y 30% (44) los datos de prueba.
+
+```{r Entrenamiento y prueba, include=FALSE, echo=FALSE, warning=FALSE}
+# División de los datos
+set.seed(1234, kind = "Mersenne-Twister")
+index <- sample(nrow(data), nrow(data)*0.7)
+train_data <- data[index,]
+test_data <- data[-index,]
+table(train_data$Species)
+table(test_data$Species)
+```
+
+Ahora entrenamos nuestro modelo utilizando *randomForest*:
+
+`RandomForest(formula, ntree=n, mtry=FALSE, maxnodes = NULL)`
+
+Argumentos:
+- Formula: Fórmula del modelo ajustado
+- ntree: Número de árboles en el *forest*.
+- mtry: Número de candidatos seleccionados para alimentar el algoritmo. Por defecto, es el cuadrado del número de columnas.
+- maxnodes: Establecer la cantidad máxima de nodos terminales en el *forest*.
+- importance=TRUE: Si se evalúa la importancia de las variables independientes en el *random forest*.
+
+
+```{r RF, echo=FALSE, warning=FALSE}
+rf <- randomForest(Species~., data = train_data, proximity=TRUE)
+rf
+```
+Por default, `randomForest` entrena 500 árboles de decisión (ntree). Nuestro *bag error* es 5.71%, entonces la precisión del algortimo de entrenamiento es de 94.29%. En el caso de mtry es 2.
+
+* Evaluación del desempeño del modelo
+
+```{r Predicción, echo=FALSE, warning=FALSE}
+species_hat <- predict(rf, test_data) # Predecir utilizando el conjutno de prueba
+confusionMatrix(species_hat, test_data$Species)
+```
+
+La precisión del modelo es 95.6% con un Kappa de 93.3%.
+
+```{r Plot, echo=FALSE, warning=FALSE}
+plot(rf)
+```
+
+El modelo se predice con gran precisión, sin necesidad de ajustes adicionales. Sin embargo, podemos ajustar una serie de árboles y mtry base con la función de debajo. 
+
+```{r Tune RF, echo=FALSE, warning=FALSE}
+t <- tuneRF(train_data[,-5], # Matriz con datos explicativos
+            train_data[,5], # Vector con variable target
+       stepFactor = 0.5,
+       plot = TRUE,
+       ntreeTry = 150, # No. de árboles de decisión en el tune
+       trace = TRUE, # Progreso de la busqueda
+       improve = 0.05) # Mejora en el OBB error
+```
+
+* No. de nodos para los árboles
+
+```{r Nodos para árboles, echo=FALSE, warning=FALSE}
+hist(treesize(rf),
+     main = "No. de nodos para los árboles",
+     col = "blue")
+
+# Atributos de importancia
+varImpPlot(rf,
+           sort = T,
+           n.var = 5,
+           main = "Top 5 - Atributos de importancia")
+importance(rf)
+```

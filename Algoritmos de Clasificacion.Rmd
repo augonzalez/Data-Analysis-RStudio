@@ -1,0 +1,185 @@
+---
+title: "Algoritmos básicos de clasificación: Árboles de decisión"
+author: "Aura Gonzalez"
+date: "9/21/2022"
+output: pdf_document
+---
+
+
+La clasificación es una forma de análisis de datos que extrae modelos que describen clases de datos importantes. Estos modelos predicen etiquetas de clase categóricas (discretas, desordenadas).  Por ejemplo, podemos construir un modelo de clasificación para categorizar las transacciones de nuestra empresa como fraudulentas o validas. 
+
+La mayoría de los algoritmos de clasificación se basan en la memoria y, por lo general, asumen un tamaño de datos pequeño. Los expertos en minería de datos han basado su trabajo, en el desarrollo de técnicas escalables de clasificación y predicción capaces de manejar grandes cantidades de datos alojadas en el disco. 
+
+La clasificación tiene numerosas aplicaciones, incluida la detección de fraudes, el marketing objetivo, la predicción del rendimiento, la fabricación y el diagnóstico médico.
+
+* Cómo funcionan los algortimos de clasificación
+
+Es un proceso de dos pasos. Primero, el algortimo pasa por un proceso de aprendizaje. En esta fase de entrenamiento, el algoritmo de clasificación construye el clasificador, analizando o “aprendiendo de” un conjunto de entrenamiento compuesto por tuplas de base de datos y sus etiquetas de clase asociadas.
+
+Una tupla, X, está representada por un vector de atributos de n dimensiones, $X = (x_1, x_2,..., x_n)$, que representa n mediciones realizadas en la tupla a partir de n atributos de la base de datos, respectivamente, $A_1, A_2,... , A_n$. Se supone que cada tupla, X, pertenece a una clase predefinida determinada por otro atributo de la base de datos denominado atributo de etiqueta de clase. El atributo de etiqueta de clase tiene un valor discreto y no está ordenado. Es categórico (o nominal) en el sentido de que cada valor sirve como categoría o clase.
+
+Y como último paso está la clasificación donde se usa el modelo para predecir la clase de un conjunto de datos nuevos.
+
+* **Detección de transacciones fraudulentas en la empresa ANOM**
+
+El departamento de Ventas y el de Inteligencia de Datos de la empresa ANOM trabajan en conjunto en la construcción de un modelo que permita, basado en ciertas características, la detección de transacciones fraudulentas.
+
+Se recolecta información sobre las transacciones reportadas por los vendedores de la empresa, las cuales han pasado por un proceso o no de inspección. Dentro de las que fueron inspeccionadas se distinguen dos categorías las detectadas como "fraud" y las "ok". Sin embargo, la gran mayoría de las transacciones no fue inspeccionada y tiene un estado desconocido.
+
+Por lo anterior, todo el dataset no puede ser utilizado para entrenar un algoritmo de clasificación, puesto que una de las clases es desconocida, pudiendo clasificar como "fraud" o "ok". 
+
+Para ilustrar los algoritmos de clasificación a presentar en clase, conservaremos en esta primera parte las transacciones calsificadas como "fraud" o "ok".
+
+```{r Datos, echo=FALSE, warning = FALSE, include=FALSE}
+pckg <- c("tidyverse",
+          "magrittr", 
+          "DMwR2",
+          "caret", # Classification adn Regression Training
+          "ROSE") 
+sapply(pckg, pckg.check)
+
+# Datos
+sales %>% glimpse()
+sales %>% 
+  group_by(Insp) %>% 
+  summarise(n = n()) %>% # Obs en cada categoría de Insp
+  mutate(prop = round(n/ sum(n)*100,2)) # Proporción de cada categoría de Insp
+
+# Eliminar la categoría "unkn"
+sales %<>%
+  filter(Insp != "unkn") # Eliminar la clase unkn del conjunto de datos
+sales[sapply(sales, is.factor)] <- lapply(sales[sapply(sales, is.factor)], factor)
+```
+
+#### Análisis exploratorio de los datos
+
+Uno de los problemas más comunes cuando se tiene la tarea de detectar transacciones fraudulentas es que el fraude en sí mismo suele ser un evento raro, es decir, poco frecuente en comparación con los casos de no fraude o validos. Veamos la distribución de casos para nuestro ejemplo...
+
+```{r Distribución de casos, warning=FALSE}
+sales %>% 
+  group_by(Insp) %>% 
+  summarise(n = n()) %>% # Obs en cada categoría de Insp
+  mutate(prop = round(n/ sum(n)*100,2)) # Proporción de cada categoría de Insp
+
+sales %>% 
+  ggplot(aes(Insp, fill = Insp)) +
+  geom_bar() +
+  geom_text(stat='count',
+             aes(label=paste0(round(((..count..)/sum(..count..)),4)*100 , "%")), vjust = 1.5, col = "white") +
+  scale_fill_manual(values =  c("ok" = "#013220", "fraud" = "#8b0000")) +
+  labs(x = "Fraudulentas vs No Fraudulentas", y = "Frecuencia", title = "Distribución de transacciones según estado", subtitle = "(% del total de observaciones)") +
+  theme_classic()
+```
+Se observa que de las 15,726 transacciones reportadas, el 91.94% fue validada, y solo el 8.06% fue reportada como fraude. A lo anterior se le suele llamar desbalance de clases o *imbalanced classification*. Este comportamiento puede inducir a sesgos en los resultados, por lo que debe corregirse utilizando métodos de *samplings* para corregir.
+
+* ¿Cuáles vendedores son más propensos a cometer fraudes?
+
+```{r Fraudes según vendedor, warning=FALSE}
+sales %>% 
+  filter(Insp == "fraud") %>% 
+  group_by(Insp, ID) %>% 
+  summarise(n = n()) %>% # Obs en cada categoría de Insp
+  mutate(prop = round(n/ sum(n)*100,2)) %>%  # Proporción de cada categoría de Insp
+  top_n(10)
+```
+
+Los 10 vendedores más propensos a cometer fraude concentran el 13.02% de las transacciones fraudulentas.
+
+* Cómo se distribuyen las ventas fraudulentas
+
+```{r Distribucion, warning=FALSE}
+sales %>% 
+  ggplot(aes(Val, fill = Insp)) +
+  geom_histogram() +
+  facet_grid(~Insp) +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90)) +
+  scale_x_continuous(labels = scales::unit_format(scale = 1e-6, 
+                                                  unit = "M"))
+```
+
+De acuerdo con el gráfico previo, el monto de las transacciones fraudulentas tiene una distribución asimétrica positiva, concentrándose la mayoría de los casos en monto pequeños. 
+
+* Datos de entrenamiento (*train*) y prueba (*test*)
+
+Sabemos que las transacciones fraudulentas son un evento raro. Dado que las transacciones fraudulentas solo representan el 8 % de los datos, duplicar transacciones fraudulentas para equilibrar los datos no es la mejor técnica (*oversampling*). Tiene más sentido muestrear los casos sin eventos a través del submuestreo (*undersampling*).
+
+```{r Train y test data, warning=FALSE}
+set.seed(164, kind = "Mersenne-Twister")
+train_id <- sample(seq_len(nrow(sales)), 
+                   size = floor(0.7*nrow(sales)))
+train_data <- sales[train_id,]
+test_data <- sales[-train_id,]
+
+# Distribución de Insp en train y test data
+table(train_data$Insp)
+table(test_data$Insp)
+```
+
+El desbalance se mantiene en ambos conjuntos de datos. 
+
+* *Undersampling*
+
+```{r Unbalanced data, warning=TRUE}
+set.seed(164, kind = "Mersenne-Twister")
+prop.table(table(train_data$Insp))
+train_data <- ovun.sample(Insp ~ .,
+                          data = train_data,
+                          method = "under", 
+                          p = 0.5, 
+                          seed = 5)$data
+# Validacion del balanceo
+prop.table(table(train_data$Insp))
+```
+
+Utilizando el método de *undersampling*, podemos obtener un conjunto de datos de entrenamiento equilibrado con 920 observaciones cada uno. Sin embargo, nuestros datos de validación permanecerán desequilibrados.
+
+* Entrenamiento del algoritmo
+
+Utilizaremos métodos de clasificación de árbol como  Decision Tree y Random Forests para predecir las transacciones fraudulentas.
+
+**Decision tree*
+
+Los árboles de decisión son algoritmos versátiles de *Machine Learning* que pueden realizar tareas de clasificación y regresión. Son muy potentes, capaces de ajustar conjuntos de datos complejos. Además, son componentes fundamentales de los modelos *random forest*, que se encuentran entre los algoritmos *Machine Learning* más potentes disponibles en la actualidad.
+
+```{r Entrenamiento con datos no balanceados, warning= FALSE}
+modelo_dt <- rpart::rpart(Insp ~ Val + Quant, data = train_data)
+rpart.plot::rpart.plot(modelo_dt)
+
+# Predicción
+predict_dt <- predict(modelo_dt, test_data, type = "class")
+# Desempeño
+confusionMatrix(test_data$Insp,predict_dt)
+roc.curve(test_data$Insp, predict_dt, plotit = TRUE)
+```
+
+Podemos calcular una medida de precisión para la tarea de clasificación con la matriz de confusión:
+
+La **matriz de confusión** es una mejor opción para evaluar el desempeño de la clasificación. La idea general es contar el número de veces que las instancias verdaderas se clasifican como falsas.
+
+Cada fila de una matriz de confusión representa la observación de cada clase, mientras que cada columna representa la predicción. 
+
+La primera fila de esta matriz considera las transacciones validas (la clase Ok): 3898 fueron clasificados correctamente como Ok (Verdadero positivo), mientras que el restante fue clasificado erróneamente como fraudulentas (Falso positivo). La segunda fila considera a los fraudes, la clase positiva fue 233 (Verdadero negativo), mientras que el Falso negativo n fue 113.
+
+* Resultados de la matriz de confusión
+
+El 89.2 % de los casos positivos fue predicho de la forma correcta, mientras este porcentaje se reduce al 67.3% en el caso de los falsos positivos. El modelo tiene un *accuracy* de 87.5%, siendo un modelo bueno.
+
+* Calculando F1-score
+
+F1-score es el promedio ponderado de Precisión y Recall. Podemos calcular esta métrica utilizando la información proporcionada anteriormente ya que:
+
+Recall=Sensitivity
+Precision = Pos Pred Value
+
+```{r F1-score, warning=TRUE}
+#Recall=Sensitivity
+Recall_1 <- 0.9718
+Precision_1 <- 0.8916
+
+F1 <- 2*(Recall_1*Precision_1)/(Recall_1+Precision_1)
+F1*100
+```
+
+El F1-score para el modelo de árbol de decisiones es del 92.99 %, lo que es muy bueno.
+

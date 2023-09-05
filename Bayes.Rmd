@@ -1,0 +1,161 @@
+---
+title: "Untitled"
+author: "Aura Gonzalez"
+date: "10/5/2022"
+output: pdf_document
+---
+
+
+*Naive Bayes*  es un algoritmo no-lineal supervizado de clasificación. Estos clasificadores son una familia de clasificadores probabilísticos simples basados en la aplicación del teorema de Bayes con fuertes suposiciones de independencia entre las características o atributos o variables. 
+
+Se basa en la idea de que las variables predictoras en un modelo de *Machine Learning* son independientes entre sí. Lo que significa que el resultado de un modelo depende de un conjunto de variables independientes, es decir, que no tienen nada que ver entre sí.
+
+No obstante, en los problemas de la vida real, las variables predictoras no son totalmente independientes entre sí (siempre existen un grado de correlación entre ellas).
+
+Entonces, el algoritmo se denomina "Naive" porque supone que la aparición de una determinada característica es independiente de la aparición de otras características.
+
+* **Aspectos teóricos**
+
+Detrás del algortimo *Naive Bayes* se encuentra el teorema de Bayes conocido también como la regla Bayes. Este teorema se usa para calcular la probabilidad condicional, que no es más que la probabilidad de que ocurra un evento en función de la información sobre los eventos en el pasado. Matemáticamente, el teorema de Bayes se representa como:
+
+$P(A|B) = P(B|A)P(A)/P(B)$
+
+donde,
+
+$P(A|B)$: probabilidad condicional de que ocurra el evento A dado el evento B.
+$P(B|A)$: probabilidad condicional de que ocurra el evento B dado el evento A.
+$P(A)$: probabilidad del evento A.
+$P(B)$: probabilidad del evento B.
+
+Formalmente, las terminologías del Teorema de Bayes son las siguientes:
+
+* A se conoce como la proposición y B es la evidencia.
+* $P(A)$ representa la probabilidad previa de la proposición.
+* $P(B)$ representa la probabilidad previa de evidencia.
+* $P(A|B)$ se llama posterior.
+* $P(B|A)$ es la probabilidad.
+
+Entonces, podemos resumir el teorema de Bayes como:
+
+Posyterior = Probabilidad * Probabilidad previa de la proposición/Probabilidad previa de evidencia
+
+* Teorema de Bayes para el algoritmo de *Naive Bayes*
+
+La ecuación anterior era para una sola variable predictora. Sin embargo, en las aplicaciones del mundo real, hay más de una variable predictora y para un problema de clasificación, hay más de una clase de salida. Las clases se pueden representar como, $C_1, C_2,…,C_k$ y las variables predictoras se pueden representar como un vector, $x_1,x_2,…,x_n$.
+
+El objetivo de un algoritmo *Naive Bayes* es medir la probabilidad condicional de un evento con un vector de características $x_1,x_2,…,x_n$ perteneciente a una clase particular $C_i$,
+
+$P(C_i|x_1,x_2,...,x_n) = P(x_1,x_2,...,x_n|C_i)P(C_i)/P(x_1,x_2,...,x_n)$
+
+Después de algunos cálculos...
+
+$P(C_i|x_1,x_2,...,x_n) =  \prod_{j=1}^n P(x_j|C_i) P(C_i)/P(x_1,x_2,...,x_n)$  para $1<i<k$
+
+
+
+**El *Naive Bayes* para análisis de sentimiento**
+
+Los datos contienen 1000 oraciones, de las cuales 500 son positivas y 500 negativas que se seleccionaron al azar de conjuntos de datos más grandes de reseñas de Yelp.
+
+La puntuación es 1 (positivo) o 0 (negativo), lo que indica si la oración tiene un sentimiento positivo o negativo.
+
+```{r Librerías y datos, include=FALSE, echo=FALSE, warning=FALSE}
+pckg <-  append(pckg, c("readxl", "tm", "wordcloud", "gmodels"))
+sapply(pckg, pckg.check)
+
+# Datos
+sentiment_data <- 
+  read_delim("sentiment labelled sentences/yelp_labelled.txt",
+            delim= "\t",
+           col_names = c("sentence","score"))
+sentiment_data %>% str()
+sentiment_data$score <- factor(sentiment_data$score)
+# Distribución de los opiniones positivas y negativas
+table(sentiment_data$score)
+```
+
+* Análisis exploratorio del conjunto de datos
+
+```{r EDA, echo=FALSE, warning=FALSE}
+# Set de entrenamiento y prueba
+set.seed(1234, kind = "Mersenne-Twister")
+index = sample(nrow(sentiment_data), 0.8*nrow(sentiment_data))
+sentiment_train <- sentiment_data[index, ]
+sentiment_test  <- sentiment_data[-index, ]
+
+# Comprobar que la clase este balanceada
+prop.table(table(sentiment_train$score))
+prop.table(table(sentiment_test$score))
+
+# Corpus para los conjuntos de entrenamiento y prueba
+train_corpus <- VCorpus(VectorSource(sentiment_train$sentence))
+test_corpus <- VCorpus(VectorSource(sentiment_test$sentence))
+
+## Visualización WordCloud
+# Subdividir los datos de entrenamiento en grupos de spam y ham
+pos <- subset(sentiment_train, score == 1)
+neg  <- subset(sentiment_train, score == 0)
+# Pos
+wordcloud(pos$sentence, 
+          max.words = 40, 
+          scale = c(3, 0.5))
+#Neg
+wordcloud(neg$sentence, 
+          max.words = 40, 
+          scale = c(3, 0.5))
+```
+
+* En la nube de palabras se esperaría ver en una revisión positiva las siguientes palabras: "good ", "great", "best". Nota: esto se ejecutó antes de eliminar las palabras vacías, por lo que "the" es una de las palabras más frecuentes.
+* Las típicas palabras para una crítica negativa están ahí: “worst”, “bad”, “disappointed”. Pero palabras como “food” y “service” aparecen a menudo en ambas clases.
+
+```{r DTM, echo=FALSE, warning=FALSE}
+# Crear una matriz dispersa de término de documento directamente desde el corpus
+train_dtm <- DocumentTermMatrix(train_corpus, 
+                                    control = list(
+                                      tolower = TRUE,
+                                      removeNumbers = TRUE,
+                                      stopwords = TRUE,
+                                      removePunctuation = TRUE,
+                                      stemming = TRUE
+                                      ))
+test_dtm <- DocumentTermMatrix(test_corpus, 
+                                    control = list(
+                                      tolower = TRUE,
+                                      removeNumbers = TRUE,
+                                      stopwords = TRUE,
+                                      removePunctuation = TRUE,
+                                      stemming = TRUE
+                                      ))
+train_dtm
+test_dtm
+# Dado que se trata de un conjunto de datos tan pequeño, no se eliminaron los términos dispersos.
+```
+
+* Especificación del modelo
+
+```{r Modelo, echo=FALSE, warning=FALSE}
+# Crear función para convertir a un factor
+convert_counts <- function(x) {
+  x <- ifelse(x > 0, "Yes", "No")
+}
+
+# apply() convert_counts() a columnas de datos de entrenamiento/prueba
+train_dtm_binary <- apply(train_dtm, MARGIN = 2, convert_counts)
+test_dtm_binary  <- apply(test_dtm, MARGIN = 2, convert_counts)
+
+# Entrenamiento del modelo
+nb_sentiment <- naiveBayes(as.matrix(train_dtm_binary), sentiment_train$score)
+```
+
+* Evaluación del desempeño del modelo
+
+```{r Predicción, echo=FALSE, warning=FALSE}
+opinion_hat <- predict(nb_sentiment, as.matrix(test_dtm_binary), laplace = .5) # Predecir utilizando el conjutno de prueba
+CrossTable(opinion_hat, 
+           sentiment_test$score,
+           prop.chisq = FALSE,
+           prop.t = FALSE,
+           prop.r = FALSE,
+           dnn = c('predicted', 'actual'))
+```
+

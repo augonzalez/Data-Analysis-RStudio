@@ -1,0 +1,143 @@
+---
+title: "Patrones frecuentes, asociaciones y correlación"
+author: "Aura Gonzalez"
+date: "9/21/2022"
+output: pdf_document
+---
+
+
+**Patrones frecuentes**. Este término refiere a patrones (p.ej. conjunto de objetos, subsecuencias o subestructuras) que aparecen de forma **frecuente** en un conjunto de datos. Por ejemplo, es frecuente ver en un supermercado que los clientes compren pan y leche en una misma visita al super. Esta compra se denominaría patrón frecuente. 
+
+Una sub-secuencia se refiere a la compra primero de un producto, como p.ej. un celular y posteriormente un *smartwatch* y unos audífonos. Si esto ocurre con cierta frecuencia en un conjunto de datos transaccionales se conoce con un **patrón secuencial frecuente**. Por otro lado, una sub-estuctura es la combinación de ambos conjunto de objetos comparados frecuentes y sub-secuencias.
+
+En la práctica para responder a cuestionamientos como: ¿Qué productos se aquieren de forma conjunta frecuentemente? O para saber ¿cuál es la probabilidad de comprar una cámara digital dado que hace unos meses ha adquirido una laptop? Para responder a nuestra primera inquietud podemos realizar un **Análisis de la cesta de mercado** fundamentado en patrones frecuentes, mientras que el segundo se basa en un análisis secuencial.
+
+En R contamos con el paquete `arules` para implementar el algoritmo Apriori y ECLAT. Utiliza un formato de base de datos de lista de identificación vertical, en que se asocia a cada secuencia una lista de objetos en los que ocurre (ver gráfica 1).
+
+
+La función `apriori()` -del algoritmo de mismo nombre- genera un conjunto de reglas más relevante a partir de los datos de una transacción determinada.
+
+Asimismo, esta función calcula tres métricas importantes para el análisis de cesta: *support*, *confidence* y *lift*. Estas tres medidas se pueden utilizar para decidir la fuerza relativa de las reglas.
+
+Suponga que su regla es $A \implies B$, entonces:
+
+*support* = no. de transacciones con A y B/n = $P(A \cap B)$
+
+*confidence* = no. de transacciones con A y B/Total de transacciones de A = $P(A \cap B)/P(A)$
+
+*expected confidence* = no. de transacciones de B/n = $P(B)$
+
+*lif* = *confidence*/*expected confidence* = $P(A \cap B)/P(A)*P(B)$
+
+**Transacciones de la empresa de comestibles Anom**
+
+Para el siguiente ejercicio utilizaremos el dataset *Groceries* que está contenido en `arules`. La información
+
+```{r Librerias y datos, }
+pckg.check <- function(x){
+  if(!require(x, character.only = TRUE)) {
+    install.packages(x, dependencies = TRUE)
+    library(x, character.only = TRUE)
+  }
+}
+pckg <- c("tidyverse", "magrittr", "DMwR2", "qwraps2", "arules", "arulesViz")
+sapply(pckg, pckg.check)
+
+# Datos en forma transacional
+data("Groceries")
+class(Groceries) # El conjudo de datos está guardado como datos transaccionales, que es el formato compatible con `apriori()`
+inspect(head(Groceries,10)) # Cada elemento contine un grupo de productos que fueron adquiridos de forma conjunta por un cliente
+
+# En caso de tener un dataframe o un archivo de texto deben convertir al formato transaccional.
+## trans_datos <- read.transactions("datos_transaccionales.txt", sep = "\t")
+# O si lo tienen en un data.frame:
+## trans_datos <- as (data.Frame, "transactions")
+
+# Inspeccionemos nuestros datos
+size(head(Groceries, 10)) # Numero de productos contenido en cada conjunto
+LIST(head(Groceries, 10)) # Convertir el objeto a una lista
+```
+
+*Objetos más frecuentes*
+
+`eclat()` toma un objeto de transacciones y brinda los elementos más frecuentes en los datos según el *support* que brinda al argumento `supp`. `maxlen` define el número máximo de elementos en cada conjunto de elementos frecuentes.
+
+```{r Más frecuentes, echo=FALSE, warning=FALSE}
+elementos_frecuentes <- eclat (Groceries, parameter = list(supp = 0.07, maxlen = 15)) # Elementos precuentes para supp = 0.07 (en al menos 688 elementos) con un max de 15 elementos en cada conjunto de elementos.
+inspect(elementos_frecuentes) # Listado de los elementos que son adquiridos más frecuentemente
+itemFrequencyPlot(Groceries, topN = 10, type = "absolute", main = "Frecuencia de los elementos", ylab = "Frecuencia absoluta")
+```
+
+*Recomendaciones de objetos más frecuentemente adquiridos juntos*
+
+```{r Frecuentes adquiridos juntos, echo = FALSE, warning=FALSE}
+regla <- apriori(Groceries, parameter = list(supp = 0.001, conf = 0.8)) # Supp minimo igual a 0.01 y confidence de 0.8
+regla_conf <- sort(regla, by = "confidence", decreasing = TRUE) # Ordernar las reglas según nivel de confianza (al más alto)
+inspect(head(regla_conf))
+
+# Ordenar por lift
+regla_lift <- sort(regla, by = "lift", decreasing = TRUE) # Ordernar las reglas según nivel de confianza (al más alto)
+inspect(head(regla_lift))
+```
+
+* Cuando ordenamos por *confidence* vimos reglas con confianza de 1, lo que implica que, cada vez que se compró el artículo LHS, también se compró el artículo RHS, en el 100 % de las veces.
+
+* Una regla con un aumento de 18 (ver regla_lift arriba) implica que los artículos en LHS y RHS tienen 18 veces más probabilidades de comprarse juntos en comparación con las compras cuando se supone que no están relacionados.
+
+*Como reducir las reglas redundantes*
+
+```{r Reglas redundantes,echo=FALSE, warning=FALSE}
+sub_reglas <- which(colSums(is.subset(regla, regla)) > 1) # obtener un vector con subconjunto de reglas
+length(sub_reglas)
+regla <- regla[-sub_reglas] 
+```
+
+*Encontrar qué influencia la compra de un producto x*
+
+Quiere saber qué habían comprado los clientes antes de comprar 'Whole milk', lo anterior le ayudará a comprender los patrones que llevaron a la compra de este producto.
+
+```{r Influencia, echo=FALSE, warning=FALSE}
+regla <- apriori(Groceries, parameter = list(supp = 0.001, conf = 0.08), appearance = list (default="lhs",rhs="whole milk"), control = list(verbose = F)) # Obtener las reglas que llevan a la compra de 'whole milk'
+regla_conf <- sort(regla, by = "confidence", decreasing = TRUE)
+inspect(head(regla_conf))
+```
+*Encontrar los productos que se compran despues de X producto*
+
+En el caso de querer averiguar los clientes que compraron 'Whole milk' ytambién compraron . . 
+
+```{r Productos después de X productos}
+reglas <- apriori(Groceries, parameter=list (supp=0.001,conf = 0.15, minlen=2), appearance = list(default="rhs",lhs="whole milk"), control = list(verbose=F)) # clientes que compraron leche también compran.
+reglas_conf <- sort(reglas, by="confidence", decreasing=TRUE) # reglas de alta confianza.
+inspect(head(reglas_conf)) # Solo aparece un producto en rhs.
+
+
+```
+
+
+*Análisis de muertes en el Titanic*
+
+```{r Datos, echo=FALSE, include=FALSE, warning=FALSE}
+load("titanic.raw.rdata") # Cargar datos sobre el Titanic
+titanic.raw %>% glimpse()
+```
+
+* Reglas para un supp = 0.005 y conf = 0.8
+
+```{r Reglas, echo=FALSE, warning=FALSE}
+reglas <- apriori(titanic.raw, 
+                  parameter = list(minlen=2, supp=0.005, conf=0.8),
+                  appearance = list(rhs=c("Survived=No", "Survived=Yes"), default="lhs"),
+                  control = list(verbose=F))
+reglas_lift <- sort(reglas, by="lift")
+inspect(reglas_lift)
+```
+* Reduciendo las reglas redundantes 
+
+```{r Pruning, echo=FALSE, warning=FALSE}
+subset_reglas <- is.subset(reglas_lift,reglas_lift)
+subset_reglas[lower.tri(subset_reglas, diag=T)] <- F
+redundantes <- apply(subset_reglas, 2, any)
+reglas_pruned <- reglas_lift[!redundantes]
+inspect(reglas_pruned)
+plot(reglas_pruned, method="grouped")
+```

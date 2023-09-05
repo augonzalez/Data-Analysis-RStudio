@@ -1,0 +1,81 @@
+---
+title: "Arboles de decision"
+author: "Aura Gonzalez"
+date: "10/5/2022"
+output: pdf_document
+---
+
+
+
+**Estimación de las especies de flores**
+
+```{r Datos, include=FALSE, echo=FALSE, warning=FALSE}
+data <- iris # Guardamos iris en un nuevo objeto para no sobreescribir el orginal
+iris %>% str() # Estructura de los datos
+data$Species <- as.factor(data$Species)
+
+# División de los datos
+set.seed(1234, kind = "Mersenne-Twister")
+index <- sample(nrow(data), nrow(data)*0.7)
+train_data <- data[index,]
+test_data <- data[-index,]
+table(train_data$Species)
+table(test_data$Species)
+```
+
+* Especificación del modelo
+
+```{r Modelo, echo=FALSE, warning=FALSE}
+fitControl <- trainControl(method = "cv", # Método de cross validation
+                           number = 10, # No. folds
+                           savePredictions = TRUE)
+# Modelo
+dt_model <- train(Species ~ ., # Target Y en función de todos los atributos del dataset
+                     data = train_data, # Data
+                     method = 'rpart', # Specify SVM model
+                     trControl = fitControl) # Use cross validation
+
+```
+
+* Evaluación de desempeño del modelo
+
+Verificar la precisión pronosticada de nuestro modelo de árbol de decisiones ejecutándolo en remuestreos de nuestros datos de entranamiento. Más tarde, probaremos la precisión del modelo ejecutando una predicción en nuestros datos de prueba.
+
+```{r Desempeño, echo=FALSE, warning=FALSE}
+confusionMatrix(dt_model)
+```
+
+Los resultados aquí nos dicen que nuestra precisión promedio es del 92.38% cuando probamos nuestros datos en remuestreos de nuestros datos de entrenamiento. También podemos ver lo que se predijo correctamente/incorrectamente.
+
+* Comprobar la importancia de cada característica en nuestro modelo.
+
+```{r Importancia de los atributos, echo=FALSE, warning=FALSE}
+# Atributos de importancia 
+dt_importancia <- varImp(dt_model)
+dt_importancia
+```
+Esta tabla nos da una visión general muy informativa de la importancia de cada variable en la predicción de la especie.
+
+Ahora, tracemos el árbol de decisión usando fancyRpartPlot() del paquete RATTLE. Esto nos dará una idea clara de cómo el modelo hace sus predicciones.
+
+```{r PlotRpart, echo=FALSE, warning=FALSE}
+rattle::fancyRpartPlot(dt_model$finalModel, sub = '')
+```
+
+Este árbol de decisión nos dice que:
+
+* Si la longitud del pétalo es inferior a 2.6, la predicción es setosa
+* Si la longitud del pétalo está entre 2.6 y 5, la predicción es versicolor.
+* Si la longitud del pétalo es superior a 5, la predicción es virginica.
+
+Como podemos ver, la longitud de los pétalos era la única variable que se necesitaba para hacer estas predicciones.
+
+* Desempeño fuera de muestra
+
+```{r Test, echo=FALSE, warning=FALSE}
+prediction_dt <- predict(dt_model, test_data)
+confusionMatrix(prediction_dt, test_data$Species)
+pROC::multiclass.roc(test_data$Species, predict(dt_model, test_data, type = "prob"), plotit = TRUE)
+```
+Como se puede observar, el 91% de las clasificaciones de especies se predijeron correctamente.
+
