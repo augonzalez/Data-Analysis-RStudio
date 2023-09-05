@@ -1,0 +1,323 @@
+---
+title: "PracticaII_AG"
+author: "Aura Gonzalez"
+date: "6/25/2022"
+output: pdf_document
+---
+
+
+
+#Modelo ANOVA:
+Datos de venenos. Se ha realizado un experimento para comprobar la efectividad de diferentes antÌdotos (AA, AB, AC y AD) frente a diferentes venenos (VA, VB y VC). Para ello se recoge el tiempo de reacciÛn (tiempo) que cada antÌdoto tarda en hacer efecto para cada veneno.
+
+
+```{r setup, include=FALSE}
+tiempo <- c(0.31, 0.45, 0.46, 0.43, 0.36, 0.29, 0.4, 0.23,
+          0.22, 0.21, 0.18, 0.23, 0.82, 1.1, 0.88, 0.72, 0.92, 0.61, 0.49,
+          1.24, 0.3, 0.37, 0.38, 0.29, 0.43, 0.45, 0.63, 0.76, 0.44, 0.35,
+          0.31, 0.4, 0.23, 0.25, 0.24, 0.22, 0.45, 0.71, 0.66, 0.62, 0.56,
+          1.02, 0.71, 0.38, 0.3, 0.35, 0.31, 0.33)
+antidoto <- factor(c(rep(1, 12), rep(2, 12), rep(3, 12), rep(4, 12)),
+                   labels=c("AA", "AB", "AC", "AD"))
+veneno <- factor(rep(rep(c(1, 2, 3),c(4, 4, 4)), 4),
+                 labels=c("VA", "VB", "VC"))
+
+
+venenos <- data.frame(tiempo, antidoto, veneno)
+# Diagrama de cajas
+ggplot(venenos,aes(x = antidoto, y = tiempo, color = veneno)) + 
+  geom_boxplot() 
+
+
+# Gráfico de interacción de medias
+ggplot(venenos, 
+  aes(x = antidoto, y = tiempo, group = veneno, color = veneno)) +
+  stat_summary(fun = mean, geom = "point") +
+  stat_summary(fun = mean, geom = "line") 
+
+
+
+```
+
+
+
+```{r setup, include=FALSE}
+
+venenos <- data.frame(tiempo, antidoto, veneno)
+# Diagrama de cajas
+ggplot(venenos,aes(x = antidoto, y = tiempo, color = veneno)) + 
+  geom_boxplot() 
+
+
+# Gráfico de interacción de medias
+ggplot(venenos, 
+  aes(x = antidoto, y = tiempo, group = veneno, color = veneno)) +
+  stat_summary(fun = mean, geom = "point") +
+  stat_summary(fun = mean, geom = "line") 
+
+```
+
+
+
+```{r setup, include=FALSE}
+
+# Ajuste del modelo
+fit.venenos <- lm( tiempo ~ antidoto*veneno, data = venenos)
+# Inferencia sobre los parámetros del modelo
+tab_model(fit.venenos,
+          show.r2 = FALSE, 
+          show.p = FALSE)
+
+
+# Objeto gráfico
+p <- plot_model(fit.venenos, "int", 
+           show.stat = TRUE, 
+           title ="")
+# Tabla de estimaciones
+p$data
+
+```
+
+
+```{r setup, include=FALSE}
+
+# Objeto gráfico
+p <- plot_model(fit.venenos, "int", 
+           show.stat = TRUE, 
+           title ="")
+# Tabla de estimaciones
+p$data
+
+p
+
+glance(fit.venenos)
+
+
+# Ajuste del modelo con interacción
+fit1 <- lm(tiempo ~ antidoto + veneno + antidoto:veneno, data = venenos)
+# Ajuste del modelo sin interacción
+fit2 <- lm(tiempo ~ antidoto + veneno, data = venenos) 
+# Comparación entre modelos
+anova(fit2, fit1)
+```
+
+
+
+```{r setup, include=FALSE}
+
+# Ajuste del modelo con interacción
+fit1 <- lm(tiempo ~ antidoto + veneno + antidoto:veneno, data = venenos)
+# Ajuste del modelo sin interacción
+fit2 <- lm(tiempo ~ antidoto + veneno, data = venenos) 
+# Comparación entre modelos
+anova(fit2, fit1)
+
+# Estimaciones de ambos modelos
+tab_model(fit1, fit2, show.r2 = FALSE) 
+
+# Gráfico del modelo sin interacción
+plot_model(fit2, "pred")
+
+
+# Selección basada en test F
+ols_step_backward_p(fit.venenos, prem = 0.05)
+
+
+```
+Como era de esperar el proceso determina que podemos prescindir del efecto de interacción.
+
+
+```{r setup, include=FALSE}
+
+# Selección con función step y AIC
+stats::step(fit.venenos, direction = "backward")
+
+fit.venenos <- lm (tiempo ~ veneno + antidoto, data = venenos)
+# Valores de diagnóstico
+diagnostico <- fortify(fit.venenos)
+# Tests de hipótesis
+ols_test_normality(fit.venenos)
+
+
+
+leveneTest(.stdresid ~ veneno*antidoto, data = diagnostico)
+
+
+```
+
+#Modelo ANCOVA:
+
+Datos de longevidad. Partridge y Farquhar realizan un experimento para relacionar la vida ˙til (longevidad) de las moscas de la fruta con su actividad reproductiva (actividad). La informaciÛn recogida es la longevidad en dÌas de 125 moscas macho, divididas en cinco grupos bajo diferentes condiciones ambientales para medir su actividad sexual. Asimismo, se recoge la longitud del tÛrax (thorax) ya que se sospecha que afecta directamente a la longevidad de las moscas.
+
+# para carga de datos:
+
+```{r setup, include=FALSE}
+thorax <- c(0.68, 0.68, 0.72, 0.72, 0.76, 0.76, 
+            0.76, 0.76, 0.76, 0.8, 0.8, 0.8, 0.84, 0.84, 
+            0.84, 0.84, 0.84, 0.84, 0.88, 0.88, 0.92, 0.92, 
+            0.92, 0.94, 0.64, 0.7, 0.72, 0.72, 0.72, 0.76, 
+            0.78, 0.8, 0.84, 0.84, 0.84, 0.84, 0.84, 0.88, 
+            0.88, 0.88, 0.88, 0.88, 0.92, 0.92, 0.92, 0.92, 
+            0.92, 0.92, 0.94, 0.64, 0.68, 0.72, 0.76, 0.76, 
+            0.8, 0.8, 0.8, 0.82, 0.82, 0.84, 0.84, 0.84, 0.84, 
+            0.84, 0.84, 0.88, 0.88, 0.88, 0.88, 0.88, 0.88, 
+            0.88, 0.92, 0.92, 0.68, 0.68, 0.72, 0.76, 0.78, 
+            0.8, 0.8, 0.8, 0.84,  0.84, 0.84, 0.84, 0.84, 
+            0.84, 0.88, 0.88, 0.88, 0.9, 0.9, 0.9, 0.9, 0.9, 
+            0.9, 0.92, 0.92, 0.64, 0.64, 0.68, 0.72, 0.72, 
+            0.74, 0.76, 0.76, 0.76, 0.78, 0.8, 0.8, 0.82, 
+            0.82, 0.84, 0.84, 0.84, 0.84, 0.88, 0.88, 0.88, 
+            0.88, 0.88, 0.88, 0.92)
+longevidad <- c(37, 49,  46,  63,  39,  46,  56,  63,  65,  
+                56,  65,  70,  63,  65, 70,  77,  81,  86,  
+                70,  70,  77,  77,  81,  77,  40,  37,  44, 
+                47,  47,  47,  68,  47,  54,  61,  71,  75,  
+                89,  58,  59,  62, 79,  96,  58,  62,  70,  
+                72,  75,  96,  75,  46,  42,  65,  46, 58,  
+                42,  48,  58,  50,  80,  63,  65,  70,  70,  
+                72,  97,  46, 56,  70,  70,  72,  76,  90,  
+                76,  92,  21,  40,  44,  54,  36, 40,  56,  
+                60,  48,  53,  60,  60,  65,  68,  60,  81,  
+                81,  48, 48,  56,  68,  75,  81,  48,  68,  
+                16,  19,  19,  32,  33,  33, 30,  42,  42,  
+                33,  26,  30,  40,  54,  34,  34,  47,  47, 
+                42, 47,  54,  54,  56,  60,  44)
+actividad <- c(rep("G1", 24), rep("G2", 25), rep("G3", 25), rep("G4", 25), rep("G5", 25))
+
+
+
+```
+
+
+
+```{r setup, include=FALSE}
+
+# Gráfico
+ggplot(longevidad, aes(x = thorax, y = longevidad, color = actividad)) + 
+  geom_point() 
+
+
+```
+
+
+```{r setup, include=FALSE}
+# Comenzamos con el modelo más sencillo
+
+# Modelo con una única recta
+M0 <- lm(longevidad ~ thorax, data = longevidad)
+
+# M1: modelo con rectas paralelas
+M1 <- lm(longevidad ~ actividad + thorax, data = longevidad)
+
+# M2: modelo con rectas no paralelas
+M2 <- lm(longevidad ~ actividad + thorax + actividad:thorax, data = longevidad)
+
+# grid de valores para construir los modelos
+grid <- longevidad %>% data_grid(actividad, thorax) %>% 
+   gather_predictions(M0, M1, M2)
+
+
+```
+
+
+```{r setup, include=FALSE}
+
+
+# Gráfico
+ggplot(longevidad,aes(thorax, longevidad, colour = actividad)) + 
+  geom_point() + 
+  geom_line(data = grid, aes(y = pred)) +
+  facet_wrap(~ model) +
+  labs(x = "Longitud del tórax", y = "Longevidad") 
+
+
+
+
+```
+
+
+```{r setup, include=FALSE}
+
+
+#Modelo saturado
+# Modelos
+fit.longevidad <- lm(longevidad ~ thorax * actividad, data = longevidad)
+# Selección del modelo
+ols_step_backward_p(fit.longevidad, prem = 0.05)
+
+
+#Ajustamos el modelo
+# Modelos
+fit.longevidad <- lm(longevidad ~ thorax + actividad, data = longevidad)
+# Parámetros estimados
+tab_model(fit.longevidad,
+          show.r2 = FALSE, 
+          show.p = FALSE)
+
+
+```
+
+
+
+
+```{r setup, include=FALSE}
+
+# Valores de diagnóstico
+diagnostico <- fortify(fit.longevidad)
+# Gráfico
+ggplot(diagnostico,aes(x = thorax, y = .stdresid, colour = actividad)) + 
+   geom_point() +
+   geom_hline(yintercept = 0, col = "red")+
+   facet_wrap(. ~ actividad)
+
+# Tests de hipótesis
+ols_test_normality(fit.longevidad)
+
+
+leveneTest(.stdresid ~ actividad, data = diagnostico)
+
+
+# Análisis de influencia
+ols_plot_cooksd_chart(fit.longevidad)
+
+MASS::boxcox(fit.longevidad)
+
+
+
+```
+
+
+```{r setup, include=FALSE}
+
+# Transformación
+longevidad <- longevidad %>% mutate(rlongevidad = sqrt(longevidad)) 
+# Modelo saturado
+fit.longevidad <- lm(rlongevidad ~ thorax * actividad, data = longevidad)
+# Selección del modelo
+ols_step_backward_p(fit.longevidad, prem = 0.05)
+
+
+## De nuevo el modelo seleccionado prescinde del efecto de interacción. Ajustamos y estudiamos el nuevo modelo.
+
+
+
+# Modelos
+fit.longevidad <- lm(rlongevidad ~ thorax + actividad, data = longevidad)
+# Parámetros estimados
+tab_model(fit.longevidad,
+          show.r2 = FALSE, 
+          show.p = FALSE)
+
+# Valores de diagnóstico
+diagnostico <- fortify(fit.longevidad)
+# Gráfico
+ggplot(diagnostico,aes(x = thorax, y = .stdresid, colour = actividad)) + 
+   geom_point() +
+   geom_hline(yintercept = 0, col = "red")+
+   facet_wrap(. ~ actividad)
+
+
+
+
+```
+
