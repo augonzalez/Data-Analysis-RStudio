@@ -1,0 +1,732 @@
+---
+title: "Reporte Final"
+author: "Aura Gonzalez"
+date: "1/21/2022"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+### Data
+
+El dataset *WHRData2021* descargado del portal [Kaggle](https://www.kaggle.com/johnharshith/world-happiness-report-2021-worldwide-mortality), recoge información sobre  los distintos países seleccionados, sus respectivas poblaciones en el año 2019 y 2020, el total de muertes por COVID-19 en cada uno de estos países, la edad mediana en los países correspondientes considerados, sea o no una isla, índice de exposición a infecciones por COVID-19 en otros países al 31 de marzo, logaritmo de la distancia promedio a los países con SARS, ya sea una región del Pacífico occidental de la OMS, sea una jefa de gobierno o no. En particular, tratamos de explicar por qué algunos países lo han hecho mucho mejor que otros.
+
+##### Planteamiento de las interrogantes (Antes del Analisis Exploratorio)
+1. ¿Cual es el promedio de exposicion de las infecciones por COVID-19 a nivel mundial?
+2. ¿Cual fue la poblacion promedio a nivel mundial en 2020?
+3. ¿El indice de confianza institucional es menor cuando el jefe de gobierno es mujer?
+4. ¿El total de muertes por COVID-19 durante el 2019 es mayor en los paises en los que el coeficiente de ingresos Gini es menor?
+5. ¿El total de muertes por COVID-19 durante el 2019 es mayor si el pais se encuentra en una region del Pacifico Occidental de la OMS?
+
+## Resultados del Analisis Exploratorio 
+
+### Analisis Descriptivo
+
+En promedio, el indice de confianza institucional cuando el jefe de gobierno es de sexo femennino asciende a 0.3721429, mientras que en promedio el indice de confianza institucional cuando el jefe de gobierno es de genero masculino es de 0.2688776.
+
+la mediana del indice de confianza con relacion a si el jefe de gobierno es de genero femenino es de 0.2975. Es decir, la mitad de los valores es menor que o igual a 0.2975 y la otra mitad de los valores es mayor que o igual a 0.2975.
+
+la mediana del indice de confianza con relacion a si el jefe de gobierno es de genero masculino es de 0.2480. Es decir, la mitad de los valores es menor que o igual a 0.2480 y la otra mitad de los valores es mayor que o igual a 0.2480.
+
+la mediana de la polacion  con relacion a si el jefe de gobierno es de genero masculino es de 10,139,175. Es decir, la mitad de los valores es menor que o igual a 10,139,175 y la otra mitad de los valores es mayor que o igual a 10,139,175.
+
+la mediana de la polacion  con relacion a si el jefe de gobierno es de genero femenino es de 5,500,180 Es decir, la mitad de los valores es menor que o igual a 5,500,180 y la otra mitad de los valores es mayor que o igual a 5,500,180.
+
+El indice de confianza miuestra que la dispersion de los datos no es muy significativa mientras que la poblacion muestra que hay gran dispersion en los valores.
+
+En este caso el indice de confianza institucional se desvia de la media porque esta por debajo de esta.
+
+El coeficiente de variación de la poblacion promedio es más de tres veces mayor que el coeficiente de variación del indice de confianza. En otras palabras, aunque el indice de confianza tiene una mayor desviación estándar, la poblacion presenta una variabilidad mucho mayor con respecto a su media.
+
+A partir del rango podemos observar la dispersion de los datos, el indice de confianza tiene un minimo de 0.059 y un maximo de 0.869, lo que podemos observar es que no hay valores atipicos en esta variable debido a que el rango se encuentra dentro de 0-1. Mientras que el promedio de la poblacion tiene un minimo de 341,250 y un maximo de 331,002,647, lo que muestra que en dependencia del pais pueden haber valores extremos en el mismo.
+
+## Analisis descriptivo para cada variable utilizada:
+
+
+Population 2020:
+min: El valor minimo de la poblacion promedio del 2020 es de 341,250.
+1st Qu: el primer cuartil (Q1) es 4,210,018. Es decir, 25% de los datos es menor que o igual a 4,210,018.
+Median: la mediana de la poblacion promedio del 2020 es de 9,006,400. Es decir, la mitad de los valores es menor que o igual a 9,006,400 y la otra mitad de los valores es mayor que o igual a 9,006,400.
+Mean: En promedio la poblacion promedio del 2020 es de 30,740,113.
+3rd Qu: el tercer cuartil (Q1) es 33,230,522. Es decir, 75% de los datos es menor que o igual a 33,230,522.
+Max: El valor maximo de la poblacion promedio 331,002,647.
+
+Population 2019:
+min: El valor minimo de la poblacion promedio del 2019 es de 361,313.
+1st Qu: el primer cuartil (Q1) es 4,156,970. Es decir, 25% de los datos es menor que o igual a 4,156,970.
+Median: la mediana de la poblacion promedio del 2019 es de 9,053,300. Es decir, la mitad de los valores es menor que o igual a 9,053,300 y la otra mitad de los valores es mayor que o igual a 9,053,300.
+Mean: En promedio la poblacion promedio del 2019 es de 30,595,373.
+3rd Qu: el tercer cuartil (Q1) es 33,045,552. Es decir, 75% de los datos es menor que o igual a 33,045,552.
+Max: El valor maximo de la poblacion promedio del 2019 es de 328,239,523.
+
+
+Index:
+min: El valor minimo del indice de exposicion de las infecciones por COVID-19 es de 0.380.
+1st Qu: el primer cuartil (Q1) es 1.110. Es decir, 25% de los datos es menor que o igual a 1.110.
+Median: la mediana del índice de exposicion de las infecciones por COVID-19 es de 2.230. Es decir, la mitad de los valores es menor que o igual a 2.230 y la otra mitad de los valores es mayor que o igual a 2.230.
+Mean: En promedio el índice de exposición de las infecciones por COVID-19 es de 2.471
+3rd Qu: el tercer cuartil (Q1) es 3.390. Es decir, 75% de los datos es menor que o igual a 3.390.
+Max: El valor maximo dl indice de exposición de las infecciones por COVID-19 es de 3.390.
+
+
+
+Index Trust:
+min: El valor minimo del índice de confianza institucional es de 0.0590.
+1st Qu: el primer cuartil (Q1) es 0.1405. Es decir, 25% de los datos es menor que o igual a 0.1405.
+Median: la mediana del índice de confianza institucional es de 0.2500. Es decir, la mitad de los valores es menor que o igual a 0.2500 y la otra mitad de los valores es mayor que o igual a 0.2500.
+Mean: En promedio el índice de índice de confianza institucional es de 0.2918.
+3rd Qu: el tercer cuartil (Q1) es 0.4070. Es decir, 75% de los datos es menor que o igual a 0.4070.
+Max: El valor maximo dl índice de confianza institucional es de 0.8690.
+
+
+Gini Coefficient:
+min: El valor minimo del índice de confianza institucional es de 23.20.
+1st Qu: el primer cuartil (Q1) es 27.80. Es decir, 25% de los datos es menor que o igual a 27.80.
+Median: la mediana del índice de confianza institucional es de 32.30. Es decir, la mitad de los valores es menor que o igual a 32.30 y la otra mitad de los valores es mayor que o igual a 32.30.
+Mean: En promedio el índice de índice de confianza institucional es de 33.79 .
+3rd Qu: el tercer cuartil (Q1) es 37.35. Es decir, 75% de los datos es menor que o igual a 37.35.
+Max: El valor maximo del indice de confianza institucional es de 54.00.
+
+
+
+
+## A partir del analisis descriptivo desarrollado anteriormente pudimos concluir: 
+Hay una presencia mayor de hombres que mujeres como jefes de gobierno. La presencia de mujeres como jefes de gobierno tiene incidencia en otras variables como el indice de gini Y el indice de confianza institucional.
+
+La cantidad de muertes por COVID-19 aumenta segun la cantidad promedio de la poblacion.
+
+
+### Luego del analisis exploratorio se formularon nuevas preguntas:
+
+1. ¿Como se comporta el indice de Gini si el jefe de gobierno es mujer?
+
+2. ¿Como se comporta el indice de Gini con relacion al promedio de la poblacion en el 2020?
+
+3. ¿Que relacion se estable entre la cantidad promedio de la poblacion y la cantidadde muertes por COVID-19 por cada 100,00 personas?
+
+4.¿Que relacion existe entre la cantidad de muertes por COVID-19 y la edad promedio de la poblacion?
+
+5. ¿Como se comporta el indice de Gini si el pais es una isla o no?
+
+
+##Analisis Grafico
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+
+path <- "/Users/Aura/Desktop"
+setwd(path)
+getwd()
+WHRData <- read.csv("WHRData2021a.csv") 
+str(WHRData) 
+View(WHRData)
+head(WHRData, 10) 
+tail(WHRData, 10) 
+library(magrittr)
+```
+
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+
+#presencia de NAs
+library(tidyverse)
+WHRData %>%
+  is.na() %>% 
+  colSums() 
+
+#Eliminando NAs
+library(magrittr)
+library(tidyverse)
+WHRData %<>%
+  drop_na() 
+```
+
+
+
+
+
+
+
+```{r  echo=FALSE, warning=FALSE, results=FALSE}
+library(tidyverse)
+WHRData_In <- WHRData %>% 
+  group_by(Female_government) %>% 
+  count() 
+
+#Gráfica de barra univariado (Caso categórico)
+
+## Indice de Incidencia
+library(tidyverse)
+WHRData %>%
+  ggplot(aes(Female_government, fill = Female_government)) + 
+  geom_bar() + 
+  geom_text(data = WHRData_In, aes(x=Female_government, y = n,label = n), vjust = 0) + 
+  labs(title = "Distribución de la muestra según segun genero", y = "No. de paises", x = "genero") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+
+
+```
+
+
+
+
+
+
+
+
+
+En el caso del gráfico de barra que muestra la distribución de la muestra según sexo, se observa que tenemos una presencia mayor de hombres que mujeres como jefes de gobierno. 
+
+
+
+
+
+En el grafico siguiente se muestra el indice de confianza segun el sexo del jefe de gobierno, en el que se puede apreciar que el indice de confianza es mayor si el jefe de gobierno es hombre, lo que esta relacionado con el hecho de que hay mayor presencia de hombres como jefes de gobierno a nivel mundial, sin embargo para las mujeres ser menos el indice de confianza es solo un 30% menos que el del hombre.
+
+
+
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+WHRData %<>%
+  group_by(Female_government) %>%
+  mutate(mean_Index_trust = mean(Index_trust))
+
+WHRData %>%
+  ggplot(aes(x = Female_government, y = mean_Index_trust)) + 
+  geom_col(position = "identity") + 
+  geom_text(aes(label = round(mean_Index_trust,2), vjust = 0)) + 
+  labs(title = "Indice de confianza según sexo del jefe de gobierno del pais", y = "Indice de confianza", x = "Género") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+
+WHRData %<>%
+  group_by(Female_government) %>%
+  mutate(mean_Gini_coefficient = mean(Gini_coefficient))
+
+WHRData %>%
+  ggplot(aes(x = Female_government, y = mean_Gini_coefficient, fill = Female_government)) + 
+  geom_col(position = "identity") + 
+  geom_text(aes(label = round(mean_Gini_coefficient,2), vjust = 0)) + 
+  labs(title = "Indice de Gini segun el sexo del jede de gobierno del pais", y = "Indice de Gini", x = "Genero") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+```
+
+
+
+
+
+Para el grafico anterior se muestra la distribucion del indice de Gini segun el sexo del jefe de gobierno, el cual nos permite apreciar que el coeficiente de Gini es mayor cuando el jefe de gobierno es mujer, lo que es muy significativo considerando que la cantidad de hombres es mayor.
+
+
+
+
+
+A continuacion se muestras Boxplots con la distribucion de la poblacion para el 2020, en el cual podemos observar que son pocos los paises que tienen un promedio de poblacion por debajo de la media.
+
+
+
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+boxplot(WHRData$Population2020)
+WHRData %>%
+  ggplot(aes(Population2020)) + 
+  geom_boxplot() + 
+  labs(title = "Distribucion de la Poblacion 2020", x = "Poblacion") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+En el siguiente grafico de dispersion se muestra la relacion entre la poblacion y el coeficiente de gini, donde podemos observar un asimetria positiva, lo que nos muestra que los paises con menor poblacion, menor es su coeficiente de gini.
+
+
+
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+WHRData %>%
+ggplot(aes(x = Population2020, y = Gini_coefficient )) +
+  geom_point() 
+
+WHRData %>%
+ggplot(aes(x = Population2020, y = COVID.19_deaths)) +
+  geom_point()
+
+```
+
+
+
+
+En el grafico anterior se muestra la relacion entre la poblacion y el coeficiente de gini, donde podemos observar un asimetria positiva, lo que nos muestra que los paises con menor poblacion han sido los que mas han tenido registros de muertes por COVID19.
+
+
+
+
+En el siguiente grafico de dispersion se muestra la Relacion entre el coeficiente de Gini y la cantidad de muertes por COVID.
+
+
+
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+#Relacion entre el coeficiente de Gini y la cantidad de muertes por COVID
+WHRData %>%
+  ggplot(aes(x = Gini_coefficient, y = COVID.19_deaths)) +
+  geom_point() +
+  theme(panel.back = element_blank()) +
+  stat_smooth(method = "lm", se = FALSE)
+
+#Relacion entre la cantidad de muertes por COVID en el 2019 y el indice de confianza institucional con el indice de Gini
+WHRData %>%
+  ggplot(aes(x = COVID.19_deaths, y = Index_trust, col = Gini_coefficient)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+#Relacion entre la cantidad de muertes por COVID del 2019 y la poblacion promedio del 2019
+WHRData %>%
+  ggplot(aes(x = COVID.19_deaths, y = Population2019, col = All.cause.death_2020)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+#Relacion entre el coeficiente de Gini y la Poblacion Promedio del 2020
+WHRData %>%
+  ggplot(aes(x = Gini_coefficient, y = Population2020)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+
+
+```
+
+
+
+En el diagrama de caja siguiente se muestra, un oxplot para cada variable de estudio, coeficiente de gini, muertes por covid19 e indice de confianza institucional.
+
+
+
+
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+par(mfrow=c(1, 3)) 
+boxplot(WHRData$Gini_coefficient, main="Coeficiente de Gini", sub=paste("Filas atípicas: ", boxplot.stats(WHRData$Gini_coefficient)$out)) # diagrama de caja para Coeficiente de Gini
+
+boxplot(WHRData$COVID.19_deaths, main="Muertes por COVID en el 2019", sub=paste("Filas atípicas: ", boxplot.stats(WHRData$COVID.19_deaths)$out)) # box plot para cantidad de muertes por COVID en el 2019
+
+boxplot(WHRData$Index_trust, main="Indice de Confianza Institucional", sub=paste("Filas atípicas: ", boxplot.stats(WHRData$Index_trust)$out)) # box plot para el Indice de Confianza Institucional
+
+
+WHRData %>% 
+  ggplot(aes(x = Gini_coefficient, y = COVID.19_deaths, relleno = Gini_coefficient)) +
+  geom_boxplot() +
+  labs(title = "Distribucion del Coeficiente de Gini segun la cantidad de muertes por COVID en el 2019", y = "Cantidad de Muertes por COVID 2019", x = "Coeficiente de Gini") +
+  theme(panel.back = element_blank(), 
+      plot.title  = element_text(hjust = 0.5))
+
+
+
+library (magrittr)
+
+```
+
+```{r echo=FALSE, warning=FALSE, results=FALSE}
+
+library (e1071)
+par(mfrow=c(1, 3)) 
+#Para Coeficiente de Gini
+plot(density(WHRData$Gini_coefficient), main="Grafica de densidad: Coeficiente de Gini", sub=paste("Asimetria:", round(e1071::skewness(WHRData$Gini_coefficient), 2))) # Grafica de densidad 
+polygon(density(WHRData$Gini_coefficient), col="#BFEFFF")
+
+#Para Indice de Confianza
+plot(density(WHRData$Index_trust), main="Grafica de densidad: Confianza Institucional", ylab="Indice", sub=paste("Asimetria:", round(e1071::skewness(WHRData$Index_trust), 2))) # Grafica de densidad 
+polygon(density(WHRData$Index_trust), col="#B2DFEE")
+
+plot(density(WHRData$COVID.19_deaths), main="Grafica de densidad: Cantidad de muertes por COVID en el 2019", ylab="Frecuencia", sub=paste("Asimetria:", round(e1071::skewness(WHRData$COVID.19_deaths), 2))) # Grafica de densidad 
+polygon(density(WHRData$COVID.19_deaths), col="#9AC0CD")
+```
+
+
+
+
+En las graficas anteriores se muestran las graficas de densidad para las principales variables de estudio, donde muestran su asimetria positiva.
+
+
+
+
+#¿cual cree que es el modelo optimo para sus datos? 
+
+Para el modelo en cuestion el modelo optimo o que mas se ajusta a los datos es el modelo de regresion lineal, debido a que en  el modelo de regresion logistica la variable dependiente debe ser Categorica y de tipo binomial, sin embargo en este caso es denominada: quasibinomial, debido que el indice de confianza institucional es una variable numerica que tiene valores entre 1 y 0 que podria considerarse tambien categorica, sin embargo alterar o dividir los datos segun la media podria ser una opcion, pero esta variable al ser un indice perderia su significancia.
+
+Sin embargo el modelo escogido, muestra que la constante para la variable dependiente (Intercept) es 0.402209, esto significa que el modelo explica el 40.22%.
+
+Muestra 5 estadisticos sobre la distribucion de los residuos del modelo: valores minimos, 1er, 2do y 3er cuartil y valor maximo. La mediana de los residuos  es -0.01707, lo que quiere decir que los residuos se distribuyen conforme a una distribucion normal  y que el 1er y 3er cuartil son simetricos. Lo mismo para lo valores minimos o maximos. 
+
+Mestra los coeficientes estimados por el modelo, es decir, los parametros ocultos de la ecuacion 1. Estas son la ordenada al origen (Intercept) y las pendientes estimadas para cada variable. En este caso, con un modelo lineal para variables dependientes e independientes continuas la interpretacion de los coeficientes es directa: la ordenada al origen senala el valor de y cuando x=0: 
+
+
+Podemos observar que el P-value es menor al nivel de significancia (5%) por lo que la variable cantidad de muertes por COVID 2019 es significativa.
+
+El error estandar de los residuos y los valores de R2, multiple y ajustado. El R2 de 0.2151 indica el modelo explica un 21.51% de la varianza de la variable dependiente.  El resto de la varianza puede atribuirse al azar o a otras variables que no hemos incorporado al modelo.
+
+
+
+Anexos: 
+
+
+
+```{r Visualizando los Datos}
+
+path <- "/Users/Aura/Desktop"
+setwd(path)
+getwd()
+WHRData <- read.csv("WHRData2021a.csv") 
+str(WHRData) 
+View(WHRData)
+head(WHRData, 10) 
+tail(WHRData, 10) 
+```
+
+
+```{r Preprocesando los datos}
+
+#presencia de NAs
+library(tidyverse)
+WHRData %>%
+  is.na() %>% 
+  colSums() 
+
+#Eliminando NAs
+library(magrittr)
+library(tidyverse)
+WHRData %<>%
+  drop_na() 
+```
+
+
+
+###Analisis Descriptivo
+
+```{r Analisis Descriptivo}
+DataWHR <- WHRData[sapply(WHRData, is.numeric)]
+summary(DataWHR)
+```
+
+# Matriz de Correlacion
+```{r}
+vars <- WHRData[sapply(WHRData, is.integer)] 
+round(cor(vars),8) 
+```
+
+##Analisis grafico Univariado
+```{r Barplot}
+WHRData_In <- WHRData %>% 
+  group_by(Female_government) %>% 
+  count() 
+
+#Gráfica de barra univariado (Caso categórico)
+
+## Indice de Incidencia
+library(tidyverse)
+WHRData %>%
+  ggplot(aes(Female_government, fill = Female_government)) + 
+  geom_bar() + 
+  geom_text(data = WHRData_In, aes(x=Female_government, y = n,label = n), vjust = 0) + 
+  labs(title = "Distribución de la muestra según segun genero", y = "No. de paises", x = "genero") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+
+
+```
+
+En el caso del gráfico de barra que muestra la distribución de la muestra según sexo, se observa que tenemos una presencia mayor de hombres que mujeres como jefes de gobierno. 
+
+###Analisis de grafico Bivariado
+
+```{r Barplot bivariado}
+WHRData %<>%
+  group_by(Female_government) %>%
+  mutate(mean_Index_trust = mean(Index_trust))
+
+WHRData %>%
+  ggplot(aes(x = Female_government, y = mean_Index_trust)) + 
+  geom_col(position = "identity") + 
+  geom_text(aes(label = round(mean_Index_trust,2), vjust = 0)) + 
+  labs(title = "Indice de confianza según sexo del jefe de gobierno del pais", y = "Indice de confianza", x = "Género") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+
+WHRData %<>%
+  group_by(Female_government) %>%
+  mutate(mean_Gini_coefficient = mean(Gini_coefficient))
+
+WHRData %>%
+  ggplot(aes(x = Female_government, y = mean_Gini_coefficient, fill = Female_government)) + 
+  geom_col(position = "identity") + 
+  geom_text(aes(label = round(mean_Gini_coefficient,2), vjust = 0)) + 
+  labs(title = "Indice de Gini segun el sexo del jede de gobierno del pais", y = "Indice de Gini", x = "Genero") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+```
+
+```{r Boxplot}
+boxplot(WHRData$Population2020)
+WHRData %>%
+  ggplot(aes(Population2020)) + 
+  geom_boxplot() + 
+  labs(title = "Distribucion de la Poblacion 2020", x = "Poblacion") + 
+  theme(panel.background = element_blank(), 
+        plot.title = element_text(hjust = 0.5)) 
+
+
+```
+
+```{r }
+WHRData %>%
+ggplot(aes(x = Population2020, y = Gini_coefficient )) +
+  geom_point() 
+
+WHRData %>%
+ggplot(aes(x = Population2020, y = Index)) +
+  geom_point()
+
+WHRData %>%
+ggplot(aes(x = Population2020, y = COVID.19_deaths)) +
+  geom_point()
+
+WHRData %>%
+ggplot(aes(x = COVID.19_deaths , y = Median_age)) +
+  geom_point()
+```
+
+
+##Grafico de Dispersion
+```{r Grafico de Dispersion}
+#Relacion entre el coeficiente de Gini y la cantidad de muertes por COVID
+WHRData %>%
+  ggplot(aes(x = Gini_coefficient, y = COVID.19_deaths)) +
+  geom_point() +
+  theme(panel.back = element_blank()) +
+  stat_smooth(method = "lm", se = FALSE)
+
+#Relacion entre el gobernante y el indice de confianza institucional con el coeficiente de Gini
+WHRData %>%
+  ggplot(aes(x = Female_government, y = Index_trust, col = Gini_coefficient)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+#Relacion entre la cantidad de muertes por COVID en el 2019 y el indice de confianza institucional con el indice de Gini
+WHRData %>%
+  ggplot(aes(x = COVID.19_deaths, y = Index_trust, col = Gini_coefficient)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+
+#Relacion entre la cantidad de muertes por COVID en el 2019 y la edad promedio
+WHRData %>%
+  ggplot(aes(x = COVID.19_deaths, y = Median_age)) +
+  geom_point() +
+  theme(panel.back = element_blank()) +
+  stat_smooth(method =  "lm", se = FALSE)
+
+#Relacion entre la cantidad de muertes por COVID del 2019, la edad promedio con la poblacion promedio del 2020
+WHRData %>%
+  ggplot(aes(x = COVID.19_deaths, y = Median_age, col = Population2020)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+#Relacion entre la cantidad de muertes por COVID del 2019 y la poblacion promedio del 2019
+WHRData %>%
+  ggplot(aes(x = COVID.19_deaths, y = Population2019, col = All.cause.death_2020)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+#Relacion entre el coeficiente de Gini y la Poblacion Promedio del 2020
+WHRData %>%
+  ggplot(aes(x = Gini_coefficient, y = Population2020)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+#Relacion entre el coeficiente de Gini y el indice de confianza institucional
+WHRData %>%
+  ggplot(aes(x = Gini_coefficient, y = Index_trust)) +
+  geom_point() +
+  theme(panel.back = element_blank())
+
+
+```
+
+##Diagrama de caja
+```{r Diagrama de Caja}
+par(mfrow=c(1, 3)) 
+boxplot(WHRData$Gini_coefficient, main="Coeficiente de Gini", sub=paste("Filas atípicas: ", boxplot.stats(WHRData$Gini_coefficient)$out)) # diagrama de caja para Coeficiente de Gini
+
+boxplot(WHRData$COVID.19_deaths, main="Muertes por COVID en el 2019", sub=paste("Filas atípicas: ", boxplot.stats(WHRData$COVID.19_deaths)$out)) # box plot para cantidad de muertes por COVID en el 2019
+
+boxplot(WHRData$Index_trust, main="Indice de Confianza Institucional", sub=paste("Filas atípicas: ", boxplot.stats(WHRData$Index_trust)$out)) # box plot para el Indice de Confianza Institucional
+
+
+WHRData %>% 
+  ggplot(aes(x = Gini_coefficient, y = COVID.19_deaths, relleno = Gini_coefficient)) +
+  geom_boxplot() +
+  labs(title = "Distribucion del Coeficiente de Gini segun la cantidad de muertes por COVID en el 2019", y = "Cantidad de Muertes por COVID 2019", x = "Coeficiente de Gini") +
+  theme(panel.back = element_blank(), 
+      plot.title  = element_text(hjust = 0.5))
+
+
+WHRData %>% 
+  ggplot(aes(x = Index_trust, y = Female_government, relleno = Index_trust)) +
+  geom_boxplot() +
+  labs(title = "Distribucion Indice de Confianza Institucional segun el jefe de gobierno", y = "Jefe de gobierno", x = "Indice de Confianza Institucional") +
+  theme(panel.back = element_blank(), 
+      plot.title  = element_text(hjust = 0.5))
+
+
+library (magrittr)
+out <-boxplot.stats(WHRData$Gini_coefficient)$out
+library(tidyverse)
+WHRData %<>% 
+  mutate(Gini_coefficient = ifelse(Gini_coefficient%in% out, mean(Gini_coefficient), Gini_coefficient)) 
+
+boxplot(WHRData$Gini_coefficient, main="Coeficiente de Gini", sub=paste("Filas atípicas: ", boxplot.stats(WHRData$Gini_coefficient)$out)) 
+```
+
+```{r Densidad}
+
+library (e1071)
+par(mfrow=c(1, 3)) 
+#Para Coeficiente de Gini
+plot(density(WHRData$Gini_coefficient), main="Grafica de densidad: Coeficiente de Gini", sub=paste("Asimetria:", round(e1071::skewness(WHRData$Gini_coefficient), 2))) # Grafica de densidad 
+polygon(density(WHRData$Gini_coefficient), col="#BFEFFF")
+
+#Para Indice de Confianza
+plot(density(WHRData$Index_trust), main="Grafica de densidad: Confianza Institucional", ylab="Indice", sub=paste("Asimetria:", round(e1071::skewness(WHRData$Index_trust), 2))) # Grafica de densidad 
+polygon(density(WHRData$Index_trust), col="#B2DFEE")
+
+#Para 
+plot(density(WHRData$COVID.19_deaths), main="Grafica de densidad: Cantidad de muertes por COVID en el 2019", ylab="Frecuencia", sub=paste("Asimetria:", round(e1071::skewness(WHRData$COVID.19_deaths), 2))) # Grafica de densidad 
+polygon(density(WHRData$COVID.19_deaths), col="#9AC0CD")
+```
+
+#1. Crear de manera aleatoria un dataset de entrenamiento que contenga el 80% de las observaciones de sus datos.
+
+```{r Entrenamiento y prueba}
+set.seed(1234) 
+index <- sample(1:nrow(WHRData), 0.8*(nrow(WHRData))) 
+testData <- WHRData[-index,] 
+trainData <- WHRData[index, ] 
+
+```
+
+##2. Utilizando el conjunto de datos creado previamente, entrenar los siguientes algoritmos:
+
+# Construccion del modelo lineal
+
+```{r LM}
+mod <- lm(Index_trust ~ Female_government + Gini_coefficient + COVID.19_deaths, data = trainData)
+print (mod)
+summary (mod)
+```
+
+Establecimos una relacion entre el Indice de Confianza (Index_trust) con su poblacion promedio en el 2020 (Population2020), Coeficiente de Gini (Gini_coefficient) y Cantidad de muertes por COVID en el 2019 (COVID.19_deaths). Como datos utilizamos la division del conjunto de datos definido para entrenamiento del modelo.
+
+  Con los Betas establecidos:
+
+$\beta_0 = 5.884e-01$
+$\beta_1 = -8.441e-10$
+$\beta_2 = -4.657e-03$
+$\beta_3 = -1.889e-03$
+
+Nuestra formula es:
+
+$y = 5.884e-01 - 8.441e-10Pop -4.657e-03*Gini -1.889e-03Cov$
+
+
+#Planteamiento de Hipotesis
+
+Se intenta probar la hipotesis nula de que la variable en cuestion no tiene relacion con la variable respuesta ($\beta_1 = 0$), mientras que en la alternativa se establece que es diferente de cero.
+
+($H0 = \beta_1 = 0$)
+($H1 = \beta_1 =/ 0$)
+
+```{r prueba t de }
+modelSummary <- summary(mod) # objeto con los resultados del modelo
+summary(mod)
+coefs <- modelSummary$coeficientes # coeficientes del modelo
+beta1.estimate <- coefs["Index_trusst", "Estimate"] 
+std.errorb1 <- coefs["Index_trusst", "Std. Error"] 
+t_value <- beta1.estimate/std.errorb1 
+p_value <- 2*pt(-abs(t_value), df=nrow(WHRData)-ncol(WHRData)) 
+```
+
+# Analisis 
+Call:  muestra la formula con la que obtuvimos el modelo. 
+
+Residuals: muestra 5 estadisticos sobre la distribucion de los residuos del modelo: valores minimos, 1er, 2do y 3er cuartil y valor maximo. La mediana de los residuos  es -0.01707, lo que quiere decir que los residuos se distribuyen conforme a una distribucion normal  y que el 1er y 3er cuartil son simetricos. Lo mismo para lo valores minimos o maximos. 
+
+Coeffcients: muestra los coeficientes estimados por el modelo, es decir, los parametros ocultos de la ecuacion 1. Estas son la ordenada al origen (Intercept) y las pendientes estimadas para cada variable. En este caso, con un modelo lineal para variables dependientes e independientes continuas la interpretacion de los coeficientes es directa: la ordenada al origen senala el valor de y cuando x=0: 
+
+El error estandar para la estimacion de cada variable, al que podemos interpretar como el promedio de los residuos. A partir del coeficiente estimado y el error estandar se computa un valor t, un estadistico de la divergencia entre el estimado que produce el modelo y un estimado hipotetico con valor 0. 
+
+Podemos observar que el P-value es menor al nivel de significancia (5%) por lo que la variable cantidad de muertes por COVID 2019 es significativa.
+
+La ultima linea muestra el error estandar de los residuos y los valores de R2, multiple y ajustado. El R2 de 0.1788 indica el modelo explica un 17.88% de la varianza de la variable dependiente.  El resto de la varianza puede atribuirse al azar o a otras variables que no hemos incorporado al modelo.
+
+La constante para la variable dependiente (Intercept) es 0.402209, esto significa que el modelo explica el 40.22%.
+
+```{r}
+AIC (mod)
+BIC (mod)
+```
+
+
+#Prediccion
+
+```{r Pred}
+mod_hat <- predict(mod, testData)
+print(mod_hat)
+```
+
+
+#Tasa de robustez y errores
+
+```{r Robustez y errores}
+reals_preds <- data.frame(cbind(reals=testData$Index_trust, predicted=mod_hat))
+correlacion_precision <- cor(reals_preds) 
+min_max_accuracy <- mean(apply(reals_preds, 1, min) / apply(reals_preds, 1, max))
+mape <- mean(abs((reals_preds$predicted - reals_preds$actuals))/reals_preds$actuals)
+mape
+```
+
+El modelo robusto aumenta los coeficientes y reduce los errores estandar, aunque no en gran cuantía. En este caso interpretamos que los casos atipicos podrian no ser un problema grave.
+
+```{r Valores proy. y actuales}
+#Proyectados fuera de muestra
+bchats <- predict(mod, newdata = testData)
+bchats_Index_trust <- factor(ifelse(bchats > 0.5, 1,0),
+                       levels = c(0,1))
+table(bchats_Index_trust)
+bchats_link <- predict(mod, newdata = testData)
+score_data <- data.frame(link = bchats_link,
+                         response = bchats,
+                         Index_trust = testData$Index_trust,
+                         stringsAsFactors = FALSE)
+score_data %>% 
+  ggplot(aes(link, response, col = Index_trust)) +
+  geom_point() +
+  theme(panel.background = element_blank())
+
+
+#Actuales fuera de muestra
+bc_actuals <- testData$Index_trust
+```
+
+En la grafica de anterior se muestran los valores proyectados fuera de muestra, donde se muestra que los datos van de manera creciente con una asimetria positiva.
