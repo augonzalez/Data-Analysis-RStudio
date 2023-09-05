@@ -1,0 +1,445 @@
+---
+title: "Untitled"
+author: "Aura Gonzalez"
+date: "1/11/2023"
+output: word_document
+---
+
+Composición y Descomposición de una Serie
+El objetivo principal de hacer análisis de series temporales es estudiar a una variable para conocer y entender su pasado, a partir de eso poder hacer predicciones del futuro en base a dicha variable. El análisis de series de tiempo es frecuente en policy makers, ya que este permite hacer una toma de decisiones más acertada. Una serie de tiempo es una secuencia de casos u observaciones en intervalos de tiempo que sigue una estructura regular. Existen diversos ejemplos de series de tiempo, como los siguientes:
+
+• Las tasas de productividad de una empresa durante los últimos 5 años.
+
+• La producción mensual de azúcar en toneladas de cierta región del país, de Enero de1995 hasta diciembre de 1997.
+
+• La tasa de crecimiento del Producto Interno Bruto de Perú en la década de 1980.
+
+
+
+El formato es ts(vector, start=, end=, frequency= ), donde start y end son los periodos de la primera y la última observación, respectivamente; frequency indica la frecuencia por unidad de tiempo (1= anual, 4=trimestral, 12=mensual, etc.).
+
+
+```{r setup, include=FALSE}
+gnp.ts = ts(gnp96$gnp96, start=c(1967,1), end=c(2002,2), frequency=4)
+
+print(gnp.ts)
+```
+
+## Graficos
+Una forma de ver la evolución de datos de series de tiempo es generando un gráfico de series de tiempo, en este se puede ver la tendencia que ha ido siguiendo cierta variable a través del tiempo. La función plot() permite hacer gráficos para variables de series de tiempo en R.
+
+```{r cars}
+plot(gnp.ts, ylab="Producto Nacional Bruto", xlab="Trimestres")
+```
+
+Componentes de una Serie de Tiempo
+Una serie de tiempo es un dato que se registra a través del tiempo. Este tipo de datos tiene a su vez componentes propios, suponiendo que son 4 componentes que actúan al mismo tiempo, son los que contribuyen a formar las características de dicha serie, estos cuatro componentes son la tendencia, la estacionalidad, la ciclicidad y la variación irregular o aleatoriedad.
+
+Tendencia
+La tendencia de largo plazo es el resultado de factores a largo plazo de la misma. Esta tendencia muestra al patrón que sigue la evolución de los datos a través del tiempo de análisis. Este componente constituye la base del incremento o decremento de la serie de tiempo. Por ejemplo, una serie que representa a la producción de cierto producto en una empresa, tiene una tendencia que estará afectada por diversos factores.
+
+Estacionalidad
+Este componente representa la variación de los datos en la serie debido a influencias estacionales. Por ejemplo, la variación de una serie año a año durante los mismos trimestres que ocurre con la misma fuerza. Un ejemplo más claro puede ser el de una empresa de venta de helados sabe que durante los meses de invierno las ventas de sus productos caerán debido al clima en dicha estación.
+
+Ciclicidad
+Este componente hace referencia a las secuencias o patrones de crecimiento y decrecimiento en la línea de tendencia que duran más de un año. Este componente es el conjunto de ciclos, de más de un año de duración que se producen por diversos factores.
+
+Aleatoriedad o Variación Irregular
+Este componente se debe a factores de corto plazo, que no pueden preverse y que afectan a la serie. A su vez explica la variabilidad irregular del comportamiento de la serie y es impredecible.
+
+Descomposición de Series de Tiempo
+Antes de hablar de descomposición de una serie de tiempo se debe entender que existen modelos que explican el comportamiento de una serie de tiempo.
+
+Modelos
+Como se pudo ver en la gráfica generada, muchas series están dominadas por efectos estacionales y de tendencia. La descomposición aditiva está dada por lo siguiente:
+
+xt=mt+st+zt
+Donde t es el tiempo, xt es la variable observada, mt es la tendencia, st es el efecto estacional y zt es el término del error. Si el efecto estacional tiende a incrementarse cuando se incrementa la tendencia, un modelo multiplicativo puede ser más apropiado para explicar la serie, este vendrá dado por:
+
+xt=mt∗st+zt
+Si la variación irregular está modelada por un factor multiplicativo y es positivo, un modelo de descomposición aditivo para loga(𝑥𝑡 ) puede ser utilizado:
+
+log(xt)=mt+st+zt
+
+## Descomposición en R
+
+En R, la función decompose() estima los efectos de tendencia y estacional usando el método de los promedios móviles. Sumado a la función plot(), esta produce una figura mostrando la serie original xt y las series de tendencia mt, estacionalidad sty variación irregular zt. Asumiendo que la serie sigue un modelo multiplicativo, se tendrá lo siguiente:
+
+
+
+```{r pressure, echo=FALSE}
+gnp.decomp = decompose(gnp.ts, type = "mult")
+```
+
+Esto generará un objeto con cada uno de los componentes de la serie, y también se podrán generar vectores que contengan a cada uno de estos objetos:
+
+```{r pressure, echo=FALSE}
+tend = gnp.decomp$trend
+estac = gnp.decomp$seasonal
+aleat = gnp.decomp$random
+```
+
+
+
+Se podrá también hacer un gráfico de dicha descomposición haciendo uso de la función plot():
+
+```{r pressure, echo=FALSE}
+plot(gnp.decomp)
+```
+
+En este ejemplo, el modelo multiplicativo parecería ser más apropiado que el modelo aditivo, ya que se puede observar un incremento en la serie original y la tendencia. La serie random obtenida de la función decompose no es precisamente la realización del proceso aleatorio, sino más bien es una estimación de ese proceso.
+
+
+Existen diversas formas de modelar datos de series de tiempo asumiendo que la serie sigue cierta estructura. Dependiente de la estructura se abordarán temas respecto a los modelos estocásticos básicos, como pueden ser los procesos de ruido blanco y random walk. Se verá también la introducción a los procesos autorregresivos y el análisis de correlograma para series de tiempo haciendo uso de R.
+
+Procesos Estocásticos Estacionarios
+Sea la serie Wt. La estacionariedad sirve para limitar o restringir lavheterogeneidad a través del tiempo de un proceso estocástico.
+
+De forma estricta la estacionariedad hace referencia a que las funciones de distribución conjunta de subconjuntos de un número cualquiera 𝑛 de una variable no varía por traslaciones en el tiempo para cualquier horizonte ℎ:
+f(wt1,wt2,...,wtn)=f(wt1+h,wt2+h,...,wtn+h)∀n,h
+
+En un sentido más amplio un proceso es estacionario si cumple las siguientes condiciones:
+E(wt)=μ,∀t
+0<Var(Wt)=σ2<∞,∀t
+Cov(Wt,Wt+k)=γ(k),k=±1,±2,...,∀t
+Cuando el proceso de análisis tiene una distribución normal, la estacionariedad en sentido estricto coincidirá con la de sentido amplio. La estacionariedad se obtiene diferenciando la serie y aplicando logaritmos (Trasformación Box-Cox). A partir de las correlaciones se va a poder tomar decisiones sobre cuál es el tipo de modelo estadístico más adecuado para dicha serie de tiempo. Cuando se impone la estacionariedad, se reduce número de parámetros, pero todavía queda un número elevado de parámetros por γk, se necesitará una condición más, que es la ergodicidad (consistencia). Cuando se quiere hacer pruebas de hipótesis y análisis de los parámetros, se va a dar con que a medida que aumenta el número de observaciones, aumentará el número de parámetros desconocidos. La condición de ergodicidad será la siguiente: La correlación serial entre variables de una serie disminuye a medida que nos alejamos en el tiempo.
+limx→∞γk=0
+
+Proceso de Ruido Blanco
+Un proceso de ruido blanco o White noise, es el modelo más simple de series temporales. Este modelo trata de una serie puramente aleatoria y se representa por 𝑎𝑡 .Una serie será de ruido blanco cuando:
+
+La esperanza es constante, , es igual a cero.
+Cov(at,at+k)=0 para todo k≠0
+Este proceso se trata básicamente de uno en el cual todas sus variables son independientes. Un ejemplo de un proceso de ruido blanco son los números de una lotería:
+
+• Cada número es independiente del anterior. • No hay dependencia entre el pasado y el futuro.
+
+Es decir, la variable tiempo no influye, ya que no hay dependencia, esto es totalmente impredecible. Un modelo de series temporales adopta la siguiente expresión:
+yt=f(pasado)+at=f(yt−1,tt−2,...)+at
+En 𝑡 − 1 la función es conocida, pero 𝑎𝑡 será desconocida, ya que es una variable aleatoria que no se puede predecir.
+
+Simulación en R
+Un proceso de ruido blanco puede ser usado en datos simulados. Las series de tiempo simuladas son llamadas series sintéticas para distinguirlas de las series históricas observadas. La simulación es útil por muchas razones, esta puede ser usada para generar escenarios futuros y construir intervalos de confianza para parámetros del modelo. En R, la simulación es un procedimiento sencillo, la mayoría de las distribuciones estadísticas son simuladas usando una función que tiene el nombre abreviado de la distribución con un prefijo ‘r’ (de “random”). Por ejemplo, rnorm(100) es usada para simular 100 valores con distribución normal, que es equivalente a simular un serie de ruido blanco Gaussiano de longitud (100). La sintaxis para hacer simulaciones es la siguiente:
+
+
+```{r pressure, echo=FALSE}
+set.seed(1)
+w = rnorm(100)
+
+```
+
+
+Podemos visualizar la serie haciendo graficándola:
+
+
+
+```{r pressure, echo=FALSE}
+plot(w, type="l")
+
+```
+
+
+La función set.seed es usada para dar un punto de salida (o seed) en simulaciones, que garantiza así la reproducción de la simulaciones. Si esta función no es indicada, una muestra diferente de datos será simulada, y las propiedades estadísticas cambiarán.
+
+
+Proceso Random Walk
+
+El proceso random walk viene dado por la siguiente expresión:
+yt=yt−1+at
+Donde at es un proceso de ruido blanco, es decir, entra en el proceso como shock aleatorio que se incorpora en cada momento. Este proceso tiene raíz unitaria, (coeficiente de yt−1), por lo tanto, la serie muestra un perfil o una tendencia evolutiva, por lo que se entenderá que no es estacionaria. Como ejemplo de este tipo de procesos, podemos notar a diferentes variables económicas en mercado eficientes, en este tipo de mercados se entiende que con un elevado número de agentes con información completa los valores presentes de las series se adaptarán a la información disponible, es decir el precio de cierto bien en el periodo t−1 será el mismo que el de futuro.
+
+Simulación en R
+Ya se ha visto en el punto anterior que es muy útil el uso de simulaciones en series de tiempo. Estas simulaciones permiten observar las características principales del modelo en gráficas, como la data histórica tiene propiedades similares, el modelo puede ser seleccionado como un candidato potencial. Los siguientes comandos pueden ser usados para modelar un proceso aleatorio en una serie de nombre y:
+
+
+```{r pressure, echo=FALSE}
+y <- w <- rnorm(1000)
+
+```
+
+Esta primera línea de comandos indica que se quiere crear dos series con 1000 observaciones, que siguen una distribución normal, la primera serie es la serie en sí, y w es el término que representa al ruido blanco.
+
+
+```{r pressure, echo=FALSE}
+for (t in 2:1000) y[t] <- y[t - 1] + w[t]
+```
+
+
+Esto indica que la serie tendrá la forma que se especificó para un proceso random walk.Se puede hacer el gráfico de dicha serie, al igual que con el ruido blanco se usará la función plot().
+
+```{r pressure, echo=FALSE}
+plot(y, type = "l")
+```
+
+
+Este es el gráfico generado por el proceso simulado de random walk o paseo aleatorio. Exhibe una tendencia a la baja, sin embargo, esto es puramente estocástico debido a la alta correlación serial.
+
+La Autocorrelación
+Función Autocovarianza
+Es un proceso gaussiano estacionario donde la media y la varianza son independientes y la covarianza de dos variables dependerá del desfase temporal de k.
+
+Cov(yt,yt+k=γ(k)+γk para k=1,2,3,..., para todo t
+γk=E[(yt−μ)(yt+k+μ)]
+La función (k) es llamada la función de autocovarianzas del proceso. Y tiene las siguientes propiedades:
+
+γ0>0yaqueeslavarianza
+yk=y−k es decir la covarianza entre una variable y otra que presenta n desfase de k períodos, ya sea hacia el pasado o hacia el futuro.
+|yk|≤y0
+Función de Autocorrelación
+La función de autocovarianzas va a depender de la unidad de medida empleada. La correlación estará definida por la siguiente expresión:
+
+Cor(yt,yt+k)=p(k)=γkγo, para k=1,±2,±3,... para todo t
+
+La función p(k)se denomina función de autocorrelación, es una función ibre de las unidades de medida de las variables, esta función mide la dependencia lineal existente entre las variables. Esta función tiene las siguientes propiedades:
+
+p0 = 1
+pk=p−k es decir, la correlación entre una variable y otra que presenta un desfase de k periodos, ya sea hacia el pasado o futuro.
+|pk|≤1
+En un proceso estacionario gaussiano toda la dependencia entre las variables viene recogida por la FAC (Función de autocorrelación). La función de autocovarianza y la de autocorrelació puede ser estimada de una serie de tiempo por sus equivalentes muestrales, ese estimador de la función de autocovarianza, ck, es el siguiente:
+ck=1k∑t=1n−k(yt−y¯)(yt+k−y¯)
+Se debe notar que la autocovarianza en el rezago 0, es la varianza calculada con denominador n. El estimador de la función de autocorrelación stá definido por:
+rk=ckc0
+#### Cálculo en R
+
+La autocorrelación e la variable y se almacenan en el vector acf(y)$asf, con el rezago k localizado en acf(x)$acf[k+1]. Por ejemplo, de acuerdo a la base de datos de lo trabajador anteriormente, la autocorrelación el rezago 1 para gnp.ts es:
+
+
+
+```{r pressure, echo=FALSE}
+acf(gnp.ts)$acf[2]
+```
+
+El primer valor , acf(x)$acf[k+1], es r0 y es igual a 1. Para obtener as autocovarianzas se debe añadir un argumento a la función acf(), a autocovarianza para el rezago 1 está dado por:
+
+```{r pressure, echo=FALSE}
+acf(gnp.ts, type = c("covariance"))$acf[2]
+```
+
+El Correlograma
+Por defecto, a función acf(), produce gráfico de rk contra k que es llamada correlograma. Por ejemplo, si escribimos la sintaxis acf(gnp.ts)obtendremos el correlograma para dicha serie.
+
+```{r pressure, echo=FALSE}
+acf(gnp.ts)
+```
+
+De este gráfico se puede entender que:
+
+El eje x da el rezago k y el eje y da la autocorrelación rk en cada rezago. Si pk=0, la distribución muestral de rk es aproximadamente normalm con una media de −1/n y una varianza de 1/n. Las líneas del correlogama se grafican en:
+−1n±2n‾√
+Si rk cae afuera de esas líneas, se tiene evidencia contra la hipótesis nula pk=0al 5% de significancia. Sin embargo se debe tener cuidado al interpretar la hipótesis nula. En primer lugar, si pk es igual a 0 en el rezago k , se espera que el 5% de los estimados caiga fuera de las líneas. En segundo lugar, os rk están correlacionados, por lo tanto, si uno cae fuera de las líneas, los coeficientes cercanos están más probables a ser estadísticamente singificativos.
+
+Modelos Autoregresivos
+Una serie yt es un proceso autoregresivo de orden p, abreviado como AR(P), si:
+
+yt=α1yt−1+α2yy−2+...+αpyt−p+Wt
+Donde Wt es el ruido blanco y αi son los parámetros del modelo con αp≠0 para un proceso de orden p. La ecuación anterior puede ser expresada como un polinomio de orden p en término del operador de rezago:
+
+θp(B)yt=(1−α1B−α2B2−...−αpBp)yt=Wt
+Donde se debe notar lo siguiente:
+
+El proceso de random walk es un caso especial de un modelo autoregresivo AR(1) con α1=1.
+El modelo es una regresión de yt en sus términos pasados de la misma serie, de ahí el nombre de “autoregesivo”.
+La predicción en el tiempo t está dada por: yt¯=α1yt−1+α2yt−2+...+αpyt−p
+Los parámetros del modelo pueden ser estimados por medio de la minimización de la suma de los cuadrados de los errores (MCO).
+Correlogama de un Proceso AR(1)
+La función de autocorrelación de un proceso AR(1) viene dada por:
+
+pk=αk(k≥0)
+Donde |α|<1. Así, el correlograma decrece a 0 o más rápidamente para los α pequeños. El siguiente ejemplo muestra dos correlogramas para valores positivos y negativos de α, respectivamente. La sintaxis siguiente mostrará el siguiente gráfico:
+
+rho <- function(k, alpha) alpha^k
+layout(1:2)
+plot(0:10, rho(0:10, 0.7),type = "b")
+plot(0:10, rho(0:10, -0.7), type = "b")
+ Se puede ver que hay decaimiento rápido hacia 0.
+
+Autocorrelación Parcial
+La autocorrelación parcial en el rezago k es la correlación que resulta de quitar el efecto de cualquier correlación debido a los términos de los rezagos más cortos. Por ejemplo, la autocorrelación parcial de un proceso *AR(1) será 0 para todos los rezagos más grande que 1. En general, la autocorrelación parcial en el rezago k es el kvo coeficiente de un modelo AR(k), si el proceso subyacente es un AR(p)**, entonces los coeficientes αk serán cero para todo k>p.
+
+Simulación en R
+Un AR(1) puede ser simulado en R se la siguiente manera:
+
+set.seed(1)
+y <- w <- rnorm(100)
+for (t in 2:100) y[t] <- 0.7 * y[t-1] + w[t]
+layout(1:3)
+plot(y, type = "l"); acf(y); pacf(y)
+ Este gráfico es un proceso AR(1), que es yt=0.7yt−1+wt. Nótese que en la autocorrelación parcial solo el primer rezago es significativo, que es usualmente caso cuando el proceso subyacente es un AR(1).
+
+Modelación de un AR(1) en R
+UnAR(p) puede ser estimado en R haciendo uso de la función ar(). De acuerdo a la serie simulada anteriormente, es estimará el modelo AR(1) de la siguiente manera:
+
+y.ar = ar(y, method = "ols")
+La sintaxis indica que se quiere estimar un modelo autorregresivo para el objeto y usando el método de estimación de mínimos cuadrados, aunque esto puede variar, ya que esta función también ofrece la estimación por máxima verosimilutd. Se puede observar el orden del modelo autorregresivo para dar razón que es de orden 1:
+
+```{r pressure, echo=FALSE}
+y.ar$order
+```
+
+Para conocer el término autorregresivo se debe seguir la siguiente especificación:
+
+```{r pressure, echo=FALSE}
+y.ar$ar
+```
+
+Regresión en Series de Tiempo
+Las tendencias en series de tiempo se clasifican como estocásticas o determinísticas. Se puede considerar a una tendencia como estocástica cuando muestra cambios inexplicables en su dirección, y se atribuye las tendencias transitorias aparentes a la alta correlación serial con el término de error. En contraste a esto, una tendencia será aleatoria cuando se tiene un modelo con explicación aceptable de la tendencia de dicha serie.
+
+Modelos Lineales
+Un modelo para una serie de tiempo (xt:t=1,...,n) es lineal si se puede expresar como:
+xt=α0+α1μ1,t+α2μ2,t+...+αmμm,t+Zt
+Donde 𝑢𝑖,𝑡 es el valor de la i-ésima variable predictora en el tiempo 𝑡, 𝑧𝑡 es el error en el tiempo 𝑡, y 𝛼0, 𝛼1, … , 𝛼𝑚 son parámetros del modelo, que pueden ser estimados por mínimos cuadrados. Un ejemplo del modelo lineal es la función polinomial de 𝑡 de orden 𝑝:
+xt=α0+α1t+α2t2+...+αptp+Zt
+Las variables predictoras pueden ser escritas como 𝑢𝑖,𝑡 = 𝑡𝑖 (𝑖 = 1, … , 𝑝). El término lineal es una referencia de la sumatoria de los parámetros del modelo, cada una por la variable predictora.
+
+Estacionariedad
+Los modelos lineales para series de tiempo son estacionarios cuando incluyen funciones de tiempo. La diferenciación puede transformar series no estacionarias con tendencia determinística en series estacionarias. Por ejemplo, si la serie de tiempo 𝑥𝑡 esta dada por una función de línea recta más el ruido blanco xt=α0+α1t+Zt, entonces la diferencia de primer orden estará dada por:
+▽Xt=Xt−Xt−1=Zt−Zt−1+α1
+Asumiendo que la serie del término de error Zt es estacionaria, la serie ▽Xt es estacionaria ya que no es una función de t.
+
+Simulación
+En regresiones de series de tiempo, es común que la serie de error Zt esté autocorrelacionada. En el siguiente código se simulará y se graficará una serie con tendencia de línea recta (50 + 3𝑡) con errores autocorrelacionados.El código indica que se creará un modelo del siguiente tipo xt=50+3t+Zt donde Zt sigue un proceso AR(1)Zt=0.8Zt−1+Wt y Wt es el término de ruido blanco con desviación estándar igual a 20.
+
+```{r pressure, echo=FALSE}
+set.seed(1)
+z = w = rnorm(100, sd=20)
+for (t in 2:100) z[t] = 0.8 *z[t-1] + w[t]
+Time = 1:100
+x = 50+3*Time+z
+plot(x, xlab = "time", type = "l")
+```
+
+Ajuste del Modelo
+Los modelos lineales se suelen ajustar usualmente minimizando la suma de los cuadrados del error ∑Z2t=∑(xt−α0−α1μ1−...−αmμm,t)2, que puede ser estimado en R con la función lm.
+
+
+
+```{r pressure, echo=FALSE}
+x.lm = lm(x~Time)
+coef(x.lm)
+```
+
+
+```{r pressure, echo=FALSE}
+sqrt(diag(vcov(x.lm)))
+```
+
+En la sintaxis indicada, se extraen los parámetros del modelo estimado con la función coef(). Se debe notar, como se esperaba, que los valores estimados son cercanos a los parámetros especificados, 50 para el intercepto y 3 para el coeficiente. Los errores estándar se extraen sacando la raíz cuadrada a los elementos de la diagonal de la matriz de varianzas y covarianzas (vcov). Después de ajustar el modelo de regresión, se deben considerar diversos gráficos de diagnóstico. En el caso de la regresión de series de tiempo, un diagnostico importante es el gráfico de correlograma de los residuos, haciendo uso de la función de autocorrelación y la función de autocorrelación parcial, de la siguiente manera:
+
+
+
+```{r pressure, echo=FALSE}
+acf(resid(x.lm))
+```
+
+
+```{r pressure, echo=FALSE}
+pacf(resid(x.lm))
+```
+
+Modelos Lineales con Variables Estacionales
+Ya que las series de tiempo son observaciones medidas de forma secuencial en el tiempo, suelen presentarse efectos estacionales en los datos.
+
+Variables aditivas de indicadores estacionales
+Suponga que una serie de tiempo contiene s estaciones. Por ejemplo, para una serie de tiempo medida para cada mes del calendario, s=12, así como las series semestrales, con s=2. Un modelo con indicador estacional para una serie de tiempo (xt:t=1,...,n) que contiene s estaciones y una tendencia mt está dada por:
+xt=mt+st+zt
+Donde st=βi cuando t cae en la i-ésima estación (t=1,…,n ; i = 1,…,s) y zt es el error residual de la serie, que puede estar autocorrelacionada . Este modelo toma la misma forma que un modelo de descomposición aditivo. La ecuación anterior no muestra en mt un término constante, es decir mt puede ser un polinomio de orden p con parámetros α1,...,αp. Esta ecuación es entonces equivalente a una tendencia polinómica en donde al término constante depende de la estación, por lo tanto, los parámetros β1,...,βs corresponden a los s posibles términos constantes. La ecuación puede ser escriba como:
+xt=mt+β1+(t−1)mod s +Zt
+Por ejemplo, con una serie de tiempo observada para cada mes del calendario comenzando con t=1 como enero, un indicador estacional con tendencia de línea recta está dado por:
+
+Ecuación
+Ecuación
+
+Los parámetros del modelo en esta ecuación pueden ser estimados por MCO o Mínimos Cuadrados Generalizados, tratando al término estacional St como un factor. En R, la función factor() puede ser aplicada para los índices estacionales extraídos usando la función cycle(). Con la base de datos de sesiones pasadas sobre el producto nacional bruto trimestral, se puede estimar el modelo de regresión estacional de la siguiente manera:
+
+
+```{r pressure, echo=FALSE}
+gnp.ts = ts(gnp96$gnp96, start=c(1967, 1), end=c(2002,2), frequency = 4)
+gnpt = window(gnp.ts, start = 1990)
+```
+
+Se está indicando la extracción de una parte de la base total, que será desde 1990, luego se deben extraer los índices estacionales con la función cycle() y el tiempo con la función time(); luego de eso se hará la regresión del modelo indicando que los índices estacionales son una variable de factor, haciendo uso de la función del mismo nombre (factor).
+
+
+
+```{r pressure, echo=FALSE}
+Seas <- cycle(gnpt)
+Time <- time(gnpt)
+temp.lm <- lm(gnpt ~ 0 + Time + factor(Seas))
+```
+
+
+Los coeficientes se observarán usando la función coef(), los ceros usados en la fórmula indica que el modelo no tiene intercepto.
+
+```{r pressure, echo=FALSE}
+coef(temp.lm)
+```
+
+Modelos No Lineales
+Los modelos lineales son aplicables en cierto rango. Sin embargo, para algunas series de tiempo puede ser más apropiado ajustar modelos no lineales de forma directa en lugar de usar logaritmos o usar aproximaciones polinómicas. Por ejemplo, si se conoce que una serie está derivada de un proceso no lineal, puede que esté basada en una ley determinística en la ciencia, es por eso que será mejor usar esta información en la formulación del modelo y ajustar un modelo no lineal directamente a los datos. Para estimar modelo no lineales en R, se debe hacer usar la función nls(), que hace referencia a la estimación por mínimos cuadrados no lineales. Se ha visto que se puede estabilizar la varianza aplicando logaritmos naturales a una serie. Sin embargo, usar logaritmos puede presentar dificultades cuando la serie presenta valores negativos, ya que el logaritmo de un valor negativo no está definido. Una manera de evitar dicho problema es añadiendo una constante a todos los términos de la serie, entonces, si Xt es una serie que contiene valores negativos, añadiendo co tal que co>max(xt) y tomando los logaritmos se produce una serie transformada (log(co+xt)) que está definida para todo t. Un modelo lineal puede entonces ser ajustado para producir el modelo:
+xt=−co+eα0+α1t+zt
+Donde α0 y α1 son parámetros del modelo y Zt es una serie residual que puede estar autocorrelacionada. La principal dificultad de la ecuación es que co debe ser estimado como otro parámetro del modelo, mientras que en la práctica el investigador suele elegir un valor arbitrario que satisface la condición (co>max(−xt)). El modelo puede ser estimado por mínimos cuadrados no lineales, de la siguiente manera:
+xt=−co+eα0+α1t+Zt
+## Simulación y ajuste de series no lineales
+
+Como los modelos no lineales son generalmente ajustados cuando se conoce la función no lineal subyacente, se simulará una serie basada en la última ecuación, con co=0 y se compararán los parámetros de la estimación usando la función nls().
+
+```{r pressure, echo=FALSE}
+set.seed(1)
+w = rnorm(100, sd = 10)
+z = rep(0 , 100)
+for (t in 2:100) z[t] = 0.7 * z[t-1] + w[t]
+Time <- 1:100
+f <- function(x) exp(1 + 0.05 * x)
+x <- f(Time) + z
+plot(x, type = "l")
+abline(0, 0)
+```
+
+
+```{r pressure, echo=FALSE}
+x.nls <- nls(x ~ exp(alp0 + alp1 * Time), start = list(alp0 = 0.1,
+alp1 = 0.5))
+summary(x.nls)$parameters
+```
+
+Pronósticos para Regresiones
+Un pronóstico es una predicción para el futuro. En el contexto de regresión de series de tiempo, un pronóstico implica la extrapolación del modelo ajustado evaluando en él la función para nuevas series de tiempo. El problema principal con esta aproximación es que las tendencias que se presentan en las series ajustadas pueden cambiar en el futuro. Por lo tanto, es mejor pensar en un pronóstico de una regresión como un valor condicional esperado en tendencias pasadas que continúan en el futuro.
+
+Predicción en R
+La función genérica para hacer predicciones en R es predict(). Esta función toma esencialmente un modelo ajustado y datos nuevos como parámetros. La clave para usar esta función con un modelo de regresión es asegurarse que la nueva data está debidamente definida y etiquetada en un data.frame.
+
+```{r pressure, echo=FALSE}
+Seas <- cycle(gnpt)
+Time <- time(gnpt)
+temp.lm <- lm(gnpt ~ 0 + Time + factor(Seas))
+#
+new.t <- time(ts(start = 1990, end = c(2002, 2), fr = 4))
+pron = ts(predict(temp.lm, new.t), st = 1990, fr=4)
+ts.plot(gnp.ts, pron, lty = 1:2)
+```
+
+La función Forecast
+El número de valores para los periodos siguientes que se desea generar es 8 en este caso. El modelo creado con tslm contiene la tendencia y el factor estacional.
+
+```{r pressure, echo=FALSE}
+library(forecast)
+mod <- tslm(gnpt ~ 0 + trend + season)
+fc = forecast(mod, h = 8)
+fc
+```
+
+
+```{r pressure, echo=FALSE}
+fc
+
+View(milkpercow)
+colnames(milkpercow) = c("mes", "milk")
+```
+
+
+```{r pressure, echo=FALSE}
+milk.ts = ts(milkpercow$milk, start=c(1962, 1), end=c(1975,12), frequency = 12)
+
+plot(milk.ts, xlab = "Tiempo" , main = "Produccion mensual de leche")
+```
